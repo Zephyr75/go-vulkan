@@ -5,7 +5,7 @@ package vk
 */
 import "C"
 
-// ---- small value structs (flat, no handles) -----------------------------
+// ---- small value structs ------------------------------------------------
 
 type Extent2D struct{ Width, Height uint32 }
 type Extent3D struct{ Width, Height, Depth uint32 }
@@ -18,7 +18,7 @@ type Viewport struct {
 	X, Y, Width, Height, MinDepth, MaxDepth float32
 }
 
-// ---- enums (int32, match C enum width) -----------------------------------
+// ---- enums (int32 to match C enum width) --------------------------------
 
 type Format int32
 
@@ -358,11 +358,11 @@ const (
 	Access2ShaderSampledRead           = AccessFlags2(0x100000000)
 )
 
-// WholeSize maps VK_WHOLE_SIZE for map/flush ranges.
+// WholeSize maps VK_WHOLE_SIZE for map/flush ranges
 const WholeSize = ^uint64(0)
 
-// ApiVersion13 is the Vulkan 1.3 version number.
+// ApiVersion13 is the Vulkan 1.3 version number
 const ApiVersion13 = uint32(C.VK_API_VERSION_1_3)
 
-// QueueFamilyIgnored for barrier ownership fields.
+// QueueFamilyIgnored for barrier ownership fields
 const QueueFamilyIgnored = uint32(C.VK_QUEUE_FAMILY_IGNORED)

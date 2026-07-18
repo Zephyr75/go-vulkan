@@ -1,6 +1,6 @@
 // Package vk is a hand-written cgo binding for the subset of Vulkan 1.3 used by
 // the "How to Vulkan 2026" tutorial: dynamic rendering, buffer device address,
-// descriptor indexing and synchronization2.
+// descriptor indexing and synchronization2
 package vk
 
 /*
@@ -16,10 +16,10 @@ import (
 	"unsafe"
 )
 
-// Result wraps VkResult and implements error for the non-success codes.
+// Wraps VkResult and implements error for the non-success codes
 type Result int32
 
-// Result codes the app must branch on. Others are stringified.
+// Result codes the app must branch on
 const (
 	Success                 = Result(C.VK_SUCCESS)
 	NotReady                = Result(C.VK_NOT_READY)
@@ -59,9 +59,7 @@ func (r Result) String() string {
 	}
 }
 
-// check turns a VkResult into a Go error: nil on success (and on the "soft"
-// codes TIMEOUT / SUBOPTIMAL / NOT_READY the caller may still want to inspect,
-// which they get as a non-nil error to branch on).
+// Turns a VkResult into a Go error with nil on success
 func check(r C.VkResult) error {
 	if r == C.VK_SUCCESS {
 		return nil
@@ -125,9 +123,8 @@ func cStrings(ss []string) (**C.char, C.uint32_t, func()) {
 
 // ---- two-call enumeration helper ----------------------------------------
 
-// enumerate runs the classic Vulkan (count, nil) then (count, ptr) pattern. f
-// receives a pointer to the count and a pointer to the first element of a
-// caller-owned slice (nil on the sizing call).
+// Runs the classic Vulkan (count, nil) then (count, ptr) pattern.
+// f receives a pointer to the count and a pointer to the first element of a caller-owned slice 
 func enumerate[T any](f func(count *C.uint32_t, out *T) C.VkResult) ([]T, error) {
 	var count C.uint32_t
 	if err := check(f(&count, nil)); err != nil {
@@ -143,8 +140,8 @@ func enumerate[T any](f func(count *C.uint32_t, out *T) C.VkResult) ([]T, error)
 	return out[:count], nil
 }
 
-// enumerateVoid is the same as enumerate for the Get* queries that return void
-// (no VkResult), e.g. vkGetPhysicalDeviceQueueFamilyProperties.
+// Runs the classic Vulkan (count, nil) then (count, ptr) pattern for functions with no VkResult.
+// f receives a pointer to the count and a pointer to the first element of a caller-owned slice 
 func enumerateVoid[T any](f func(count *C.uint32_t, out *T)) []T {
 	var count C.uint32_t
 	f(&count, nil)
@@ -156,7 +153,7 @@ func enumerateVoid[T any](f func(count *C.uint32_t, out *T)) []T {
 	return out[:count]
 }
 
-// MemCopy copies a Go slice into a mapped device pointer.
+// Copies a Go slice into a mapped device pointer
 func MemCopy[T any](dst unsafe.Pointer, src []T) {
 	if len(src) == 0 {
 		return

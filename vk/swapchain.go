@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-// SurfaceCapabilities is a Goified subset of VkSurfaceCapabilitiesKHR.
+// Subset of VkSurfaceCapabilitiesKHR
 type SurfaceCapabilities struct {
 	MinImageCount           uint32
 	MaxImageCount           uint32
@@ -22,6 +22,7 @@ type SurfaceCapabilities struct {
 	SupportedUsageFlags     ImageUsageFlags
 }
 
+// Queries the surface capabilities of a physical device
 func GetPhysicalDeviceSurfaceCapabilitiesKHR(pd PhysicalDevice, s SurfaceKHR) (SurfaceCapabilities, error) {
 	var c C.VkSurfaceCapabilitiesKHR
 	err := check(C.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -47,6 +48,7 @@ type SurfaceFormat struct {
 	ColorSpace ColorSpace
 }
 
+// Lists the surface formats supported by a physical device
 func GetPhysicalDeviceSurfaceFormatsKHR(pd PhysicalDevice, s SurfaceKHR) ([]SurfaceFormat, error) {
 	dev := C.VkPhysicalDevice(unsafe.Pointer(pd))
 	surf := C.VkSurfaceKHR(unsafe.Pointer(s))
@@ -63,22 +65,24 @@ func GetPhysicalDeviceSurfaceFormatsKHR(pd PhysicalDevice, s SurfaceKHR) ([]Surf
 	return res, nil
 }
 
+// Lists the present modes supported by a physical device for a surface
 func GetPhysicalDeviceSurfacePresentModesKHR(pd PhysicalDevice, s SurfaceKHR) ([]PresentMode, error) {
-	dev := C.VkPhysicalDevice(unsafe.Pointer(pd))
-	surf := C.VkSurfaceKHR(unsafe.Pointer(s))
-	raw, err := enumerate(func(count *C.uint32_t, out *C.VkPresentModeKHR) C.VkResult {
-		return C.vkGetPhysicalDeviceSurfacePresentModesKHR(dev, surf, count, out)
+	vkDevice := C.VkPhysicalDevice(unsafe.Pointer(pd))
+	vkSurface := C.VkSurfaceKHR(unsafe.Pointer(s))
+	vkPresentModes, err := enumerate(func(count *C.uint32_t, out *C.VkPresentModeKHR) C.VkResult {
+		return C.vkGetPhysicalDeviceSurfacePresentModesKHR(vkDevice, vkSurface, count, out)
 	})
 	if err != nil {
 		return nil, err
 	}
-	res := make([]PresentMode, len(raw))
-	for i := range raw {
-		res[i] = PresentMode(raw[i])
+	presentModes := make([]PresentMode, len(vkPresentModes))
+	for i := range vkPresentModes {
+		presentModes[i] = PresentMode(vkPresentModes[i])
 	}
-	return res, nil
+	return presentModes, nil
 }
 
+// Checks if a physical device's queue family supports presentation to a surface
 func GetPhysicalDeviceSurfaceSupportKHR(pd PhysicalDevice, family uint32, s SurfaceKHR) (bool, error) {
 	var sup C.VkBool32
 	err := check(C.vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -103,6 +107,7 @@ type SwapchainCreateInfo struct {
 	OldSwapchain     SwapchainKHR
 }
 
+// CreateSwapchainKHR creates a swapchain; ImageArrayLayers defaults to 1 when zero.
 func CreateSwapchainKHR(d Device, ci SwapchainCreateInfo) (SwapchainKHR, error) {
 	if ci.ImageArrayLayers == 0 {
 		ci.ImageArrayLayers = 1
@@ -135,6 +140,7 @@ func CreateSwapchainKHR(d Device, ci SwapchainCreateInfo) (SwapchainKHR, error) 
 	return SwapchainKHR(unsafe.Pointer(out)), nil
 }
 
+// GetSwapchainImagesKHR returns the presentable images owned by a swapchain.
 func GetSwapchainImagesKHR(d Device, sc SwapchainKHR) ([]Image, error) {
 	dev := C.VkDevice(unsafe.Pointer(d))
 	swap := C.VkSwapchainKHR(unsafe.Pointer(sc))
@@ -151,10 +157,12 @@ func GetSwapchainImagesKHR(d Device, sc SwapchainKHR) ([]Image, error) {
 	return res, nil
 }
 
+// DestroySwapchainKHR destroys a swapchain.
 func DestroySwapchainKHR(d Device, sc SwapchainKHR) {
 	C.vkDestroySwapchainKHR(C.VkDevice(unsafe.Pointer(d)), C.VkSwapchainKHR(unsafe.Pointer(sc)), nil)
 }
 
+// DestroySurfaceKHR destroys a surface.
 func DestroySurfaceKHR(i Instance, s SurfaceKHR) {
 	C.vkDestroySurfaceKHR(C.VkInstance(unsafe.Pointer(i)), C.VkSurfaceKHR(unsafe.Pointer(s)), nil)
 }
@@ -176,6 +184,7 @@ type ImageViewCreateInfo struct {
 	SubresourceRange ImageSubresourceRange
 }
 
+// CreateImageView creates an image view.
 func CreateImageView(d Device, ci ImageViewCreateInfo) (ImageView, error) {
 	info := C.VkImageViewCreateInfo{
 		sType:    C.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -197,6 +206,7 @@ func CreateImageView(d Device, ci ImageViewCreateInfo) (ImageView, error) {
 	return ImageView(unsafe.Pointer(out)), nil
 }
 
+// DestroyImageView destroys an image view.
 func DestroyImageView(d Device, v ImageView) {
 	C.vkDestroyImageView(C.VkDevice(unsafe.Pointer(d)), C.VkImageView(unsafe.Pointer(v)), nil)
 }

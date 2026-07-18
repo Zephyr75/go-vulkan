@@ -100,7 +100,7 @@ func DestroyPipelineLayout(d Device, l PipelineLayout) {
 
 type arena struct{ frees []unsafe.Pointer }
 
-// alloc returns zeroed C memory for n elements of the given size.
+// Returns zeroed heap C memory for n elements of the given size
 func (a *arena) alloc(n int, size uintptr) unsafe.Pointer {
 	p := C.calloc(C.size_t(n), C.size_t(size))
 	a.frees = append(a.frees, p)

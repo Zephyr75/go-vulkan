@@ -11,7 +11,6 @@ import (
 	"unsafe"
 )
 
-// InstanceCreateInfo is the Go-facing input to CreateInstance.
 type InstanceCreateInfo struct {
 	AppName    string
 	EngineName string
@@ -20,8 +19,7 @@ type InstanceCreateInfo struct {
 	Layers     []string
 }
 
-// CreateInstance creates a VkInstance. Extensions typically come from
-// glfw.GetRequiredInstanceExtensions().
+// Creates instance from application, extensions and layers information
 func CreateInstance(ci InstanceCreateInfo) (Instance, error) {
 	appName := C.CString(ci.AppName)
 	defer C.free(unsafe.Pointer(appName))
@@ -34,7 +32,7 @@ func CreateInstance(ci InstanceCreateInfo) (Instance, error) {
 	}
 
 	const v100 = 1 << 22 // VK_MAKE_API_VERSION(0,1,0,0)
-	app := C.VkApplicationInfo{
+	vkAppInfo := C.VkApplicationInfo{
 		sType:              C.VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		pApplicationName:   appName,
 		applicationVersion: v100,
@@ -43,37 +41,37 @@ func CreateInstance(ci InstanceCreateInfo) (Instance, error) {
 		apiVersion:         C.uint32_t(api),
 	}
 
-	exts, extCount, freeExts := cStrings(ci.Extensions)
-	defer freeExts()
+	extensions, extensionsCount, freeExtensions := cStrings(ci.Extensions)
+	defer freeExtensions()
 	layers, layerCount, freeLayers := cStrings(ci.Layers)
 	defer freeLayers()
 
-	info := C.VkInstanceCreateInfo{
+	vkInfo := C.VkInstanceCreateInfo{
 		sType:                   C.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		pApplicationInfo:        &app,
-		enabledExtensionCount:   extCount,
-		ppEnabledExtensionNames: exts,
+		pApplicationInfo:        &vkAppInfo,
+		enabledExtensionCount:   extensionsCount,
+		ppEnabledExtensionNames: extensions,
 		enabledLayerCount:       layerCount,
 		ppEnabledLayerNames:     layers,
 	}
 
-	// info.pApplicationInfo points at the Go-stack `app`; pin it for the call.
+	// app is stored on Go stack and could move, pin keeps it at a constant address
 	var pin runtime.Pinner
-	pin.Pin(&app)
+	pin.Pin(&vkAppInfo)
 	defer pin.Unpin()
 
-	var out C.VkInstance
-	if err := check(C.vkCreateInstance(&info, nil, &out)); err != nil {
+	var vkInstance C.VkInstance
+	if err := check(C.vkCreateInstance(&vkInfo, nil, &vkInstance)); err != nil {
 		return 0, err
 	}
-	return Instance(unsafe.Pointer(out)), nil
+	return Instance(unsafe.Pointer(vkInstance)), nil
 }
 
 func DestroyInstance(i Instance) {
 	C.vkDestroyInstance(C.VkInstance(unsafe.Pointer(i)), nil)
 }
 
-// EnumeratePhysicalDevices lists all GPUs the instance sees.
+// Lists all GPUs the instance sees
 func EnumeratePhysicalDevices(i Instance) ([]PhysicalDevice, error) {
 	inst := C.VkInstance(unsafe.Pointer(i))
 	handles, err := enumerate(func(count *C.uint32_t, out *C.VkPhysicalDevice) C.VkResult {
@@ -89,7 +87,6 @@ func EnumeratePhysicalDevices(i Instance) ([]PhysicalDevice, error) {
 	return res, nil
 }
 
-// PhysicalDeviceProperties is a Goified subset of VkPhysicalDeviceProperties.
 type PhysicalDeviceProperties struct {
 	APIVersion    uint32
 	DriverVersion uint32
@@ -104,42 +101,41 @@ type PhysicalDeviceProperties struct {
 }
 
 func GetPhysicalDeviceProperties2(pd PhysicalDevice) PhysicalDeviceProperties {
-	var props C.VkPhysicalDeviceProperties2
-	props.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
-	C.vkGetPhysicalDeviceProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), &props)
-	p := props.properties
+	var vkDeviceProperties C.VkPhysicalDeviceProperties2
+	vkDeviceProperties.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+	C.vkGetPhysicalDeviceProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), &vkDeviceProperties)
+	properties := vkDeviceProperties.properties
 	return PhysicalDeviceProperties{
-		APIVersion:                      uint32(p.apiVersion),
-		DriverVersion:                   uint32(p.driverVersion),
-		VendorID:                        uint32(p.vendorID),
-		DeviceID:                        uint32(p.deviceID),
-		DeviceType:                      PhysicalDeviceType(p.deviceType),
-		DeviceName:                      C.GoString(&p.deviceName[0]),
-		MinUniformBufferOffsetAlignment: uint64(p.limits.minUniformBufferOffsetAlignment),
-		MinStorageBufferOffsetAlignment: uint64(p.limits.minStorageBufferOffsetAlignment),
-		MaxSamplerAnisotropy:            float32(p.limits.maxSamplerAnisotropy),
+		APIVersion:                      uint32(properties.apiVersion),
+		DriverVersion:                   uint32(properties.driverVersion),
+		VendorID:                        uint32(properties.vendorID),
+		DeviceID:                        uint32(properties.deviceID),
+		DeviceType:                      PhysicalDeviceType(properties.deviceType),
+		DeviceName:                      C.GoString(&properties.deviceName[0]),
+		MinUniformBufferOffsetAlignment: uint64(properties.limits.minUniformBufferOffsetAlignment),
+		MinStorageBufferOffsetAlignment: uint64(properties.limits.minStorageBufferOffsetAlignment),
+		MaxSamplerAnisotropy:            float32(properties.limits.maxSamplerAnisotropy),
 	}
 }
 
-// QueueFamilyProperties is a Goified subset.
 type QueueFamilyProperties struct {
 	QueueFlags QueueFlags
 	QueueCount uint32
 }
 
 func GetPhysicalDeviceQueueFamilyProperties(pd PhysicalDevice) []QueueFamilyProperties {
-	dev := C.VkPhysicalDevice(unsafe.Pointer(pd))
+	vkDevice := C.VkPhysicalDevice(unsafe.Pointer(pd))
 	raw := enumerateVoid(func(count *C.uint32_t, out *C.VkQueueFamilyProperties) {
-		C.vkGetPhysicalDeviceQueueFamilyProperties(dev, count, out)
+		C.vkGetPhysicalDeviceQueueFamilyProperties(vkDevice, count, out)
 	})
-	res := make([]QueueFamilyProperties, len(raw))
+	result := make([]QueueFamilyProperties, len(raw))
 	for k := range raw {
-		res[k] = QueueFamilyProperties{
+		result[k] = QueueFamilyProperties{
 			QueueFlags: QueueFlags(raw[k].queueFlags),
 			QueueCount: uint32(raw[k].queueCount),
 		}
 	}
-	return res
+	return result
 }
 
 // MemoryType / MemoryHeap / PhysicalDeviceMemoryProperties for manual alloc.
@@ -157,23 +153,23 @@ type PhysicalDeviceMemoryProperties struct {
 }
 
 func GetPhysicalDeviceMemoryProperties2(pd PhysicalDevice) PhysicalDeviceMemoryProperties {
-	var mp C.VkPhysicalDeviceMemoryProperties2
-	mp.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2
-	C.vkGetPhysicalDeviceMemoryProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), &mp)
-	m := mp.memoryProperties
+	var vkMemoryProperties C.VkPhysicalDeviceMemoryProperties2
+	vkMemoryProperties.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2
+	C.vkGetPhysicalDeviceMemoryProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), &vkMemoryProperties)
+	vkProperties := vkMemoryProperties.memoryProperties
 
-	types := make([]MemoryType, m.memoryTypeCount)
-	for k := 0; k < int(m.memoryTypeCount); k++ {
+	types := make([]MemoryType, vkProperties.memoryTypeCount)
+	for k := 0; k < int(vkProperties.memoryTypeCount); k++ {
 		types[k] = MemoryType{
-			PropertyFlags: MemoryPropertyFlags(m.memoryTypes[k].propertyFlags),
-			HeapIndex:     uint32(m.memoryTypes[k].heapIndex),
+			PropertyFlags: MemoryPropertyFlags(vkProperties.memoryTypes[k].propertyFlags),
+			HeapIndex:     uint32(vkProperties.memoryTypes[k].heapIndex),
 		}
 	}
-	heaps := make([]MemoryHeap, m.memoryHeapCount)
-	for k := 0; k < int(m.memoryHeapCount); k++ {
+	heaps := make([]MemoryHeap, vkProperties.memoryHeapCount)
+	for k := 0; k < int(vkProperties.memoryHeapCount); k++ {
 		heaps[k] = MemoryHeap{
-			Size:  uint64(m.memoryHeaps[k].size),
-			Flags: uint32(m.memoryHeaps[k].flags),
+			Size:  uint64(vkProperties.memoryHeaps[k].size),
+			Flags: uint32(vkProperties.memoryHeaps[k].flags),
 		}
 	}
 	return PhysicalDeviceMemoryProperties{MemoryTypes: types, MemoryHeaps: heaps}

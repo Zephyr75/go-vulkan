@@ -7,7 +7,6 @@ import "C"
 
 import "unsafe"
 
-// BufferCreateInfo is the Go-facing input to CreateBuffer.
 type BufferCreateInfo struct {
 	Size  uint64
 	Usage BufferUsageFlags

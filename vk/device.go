@@ -8,14 +8,10 @@ import "C"
 
 import "unsafe"
 
-// Features toggles the feature bits the tutorial needs, spread across the
-// Vulkan 1.0 / 1.2 / 1.3 feature structs. CreateDevice builds the pNext chain.
+// Physical device features
 type Features struct {
 	// 1.0
 	SamplerAnisotropy bool
-	// 1.3
-	DynamicRendering bool
-	Synchronization2 bool
 	// 1.2
 	BufferDeviceAddress                          bool
 	DescriptorIndexing                           bool
@@ -24,6 +20,9 @@ type Features struct {
 	DescriptorBindingVariableDescriptorCount     bool
 	ShaderSampledImageArrayNonUniformIndexing    bool
 	DescriptorBindingSampledImageUpdateAfterBind bool
+	// 1.3
+	DynamicRendering bool
+	Synchronization2 bool
 }
 
 type DeviceQueueCreateInfo struct {
@@ -44,9 +43,8 @@ func vkBool(b bool) C.VkBool32 {
 	return C.VK_FALSE
 }
 
-// c builds the feature pNext chain (Features2 -> Vulkan12 -> Vulkan13) in the
-// arena and returns the head to hang off VkDeviceCreateInfo.pNext.
-func (f Features) c(a *arena) *C.VkPhysicalDeviceFeatures2 {
+// Builds the features pNext chain Features2 -> Vulkan12 -> Vulkan13) in the arena and returns the head
+func (f Features) chain(a *arena) *C.VkPhysicalDeviceFeatures2 {
 	v13 := (*C.VkPhysicalDeviceVulkan13Features)(a.alloc(1, unsafe.Sizeof(C.VkPhysicalDeviceVulkan13Features{})))
 	v13.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES
 	v13.dynamicRendering = vkBool(f.DynamicRendering)
@@ -70,48 +68,45 @@ func (f Features) c(a *arena) *C.VkPhysicalDeviceFeatures2 {
 	return feat2
 }
 
-// queueInfosC marshals the queue create infos (with their priority arrays) into
-// the arena.
-func queueInfosC(a *arena, in []DeviceQueueCreateInfo) (*C.VkDeviceQueueCreateInfo, C.uint32_t) {
-	n := len(in)
-	if n == 0 {
+// Converts local DeviceQueueCreateInfo to vulkan format
+func vulkanQueueCreateInfo(a *arena, ci []DeviceQueueCreateInfo) (*C.VkDeviceQueueCreateInfo, C.uint32_t) {
+	infoCount := len(ci)
+	if infoCount == 0 {
 		return nil, 0
 	}
-	p := (*C.VkDeviceQueueCreateInfo)(a.alloc(n, unsafe.Sizeof(C.VkDeviceQueueCreateInfo{})))
-	qs := unsafe.Slice(p, n)
-	for i, q := range in {
-		pc := len(q.Priorities)
-		pr := (*C.float)(a.alloc(pc, unsafe.Sizeof(C.float(0))))
-		prs := unsafe.Slice(pr, pc)
+	vkInfoAllocPtr := (*C.VkDeviceQueueCreateInfo)(a.alloc(infoCount, unsafe.Sizeof(C.VkDeviceQueueCreateInfo{})))
+	vkInfoSlice := unsafe.Slice(vkInfoAllocPtr, infoCount)
+	for i, q := range ci {
+		prioCount := len(q.Priorities)
+		prioAllocPtr := (*C.float)(a.alloc(prioCount, unsafe.Sizeof(C.float(0))))
+		prioSlice := unsafe.Slice(prioAllocPtr, prioCount)
 		for k, v := range q.Priorities {
-			prs[k] = C.float(v)
+			prioSlice[k] = C.float(v)
 		}
-		qs[i].sType = C.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO
-		qs[i].queueFamilyIndex = C.uint32_t(q.QueueFamilyIndex)
-		qs[i].queueCount = C.uint32_t(pc)
-		qs[i].pQueuePriorities = pr
+		vkInfoSlice[i].sType = C.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO
+		vkInfoSlice[i].queueFamilyIndex = C.uint32_t(q.QueueFamilyIndex)
+		vkInfoSlice[i].queueCount = C.uint32_t(prioCount)
+		vkInfoSlice[i].pQueuePriorities = prioAllocPtr
 	}
-	return p, C.uint32_t(n)
+	return vkInfoAllocPtr, C.uint32_t(infoCount)
 }
 
-// CreateDevice builds the logical device. The feature pNext chain and queue
-// infos are marshaled by the helpers above; all C-visible memory lives in the
-// arena so no Go pointers are held by C across the call.
+// Builds the logical device
 func CreateDevice(pd PhysicalDevice, ci DeviceCreateInfo) (Device, error) {
 	var a arena
 	defer a.free()
 
-	exts, extCount, freeExts := cStrings(ci.Extensions)
-	defer freeExts()
+	extensions, extensionsCount, freeExtensions := cStrings(ci.Extensions)
+	defer freeExtensions()
 
-	qInfos, qCount := queueInfosC(&a, ci.QueueCreateInfos)
+	qInfos, qCount := vulkanQueueCreateInfo(&a, ci.QueueCreateInfos)
 	info := C.VkDeviceCreateInfo{
 		sType:                   C.VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		pNext:                   unsafe.Pointer(ci.Features.c(&a)),
+		pNext:                   unsafe.Pointer(ci.Features.chain(&a)),
 		queueCreateInfoCount:    qCount,
 		pQueueCreateInfos:       qInfos,
-		enabledExtensionCount:   extCount,
-		ppEnabledExtensionNames: exts,
+		enabledExtensionCount:   extensionsCount,
+		ppEnabledExtensionNames: extensions,
 	}
 
 	var out C.VkDevice
@@ -126,9 +121,9 @@ func DestroyDevice(d Device) {
 }
 
 func GetDeviceQueue(d Device, family, index uint32) Queue {
-	var q C.VkQueue
-	C.vkGetDeviceQueue(C.VkDevice(unsafe.Pointer(d)), C.uint32_t(family), C.uint32_t(index), &q)
-	return Queue(unsafe.Pointer(q))
+	var queue C.VkQueue
+	C.vkGetDeviceQueue(C.VkDevice(unsafe.Pointer(d)), C.uint32_t(family), C.uint32_t(index), &queue)
+	return Queue(unsafe.Pointer(queue))
 }
 
 func DeviceWaitIdle(d Device) error {
