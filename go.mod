@@ -1,4 +1,4 @@
-module govk
+module go-vulkan
 
 go 1.26.3
 

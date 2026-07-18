@@ -10,7 +10,7 @@ Layering, bottom to top:
 libvulkan / driver          real work
 vk (cgo bindings)           1:1 wrappers, Go types in / Go errors out
 vk/vma.go (pure Go)         VMA-shaped allocator built on the bindings
-cmd/howto                   the demo, mirroring _reference.cpp
+how_to_vulkan               the demo, mirroring _reference.cpp
 ```
 
 General references:

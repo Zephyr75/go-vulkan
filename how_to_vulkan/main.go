@@ -26,10 +26,10 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 
-	"govk/internal/obj"
-	"govk/internal/texture"
-	"govk/shaders"
-	"govk/vk"
+	"go-vulkan/demo/obj"
+	"go-vulkan/demo/texture"
+	"go-vulkan/demo/shaders"
+	"go-vulkan/vk"
 )
 
 // maxFramesInFlight is how many frames the CPU may record ahead of the GPU. Two
