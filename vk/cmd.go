@@ -15,7 +15,7 @@ import "unsafe"
 // ClearColor or ClearDepthStencil.
 type ClearValue [16]byte
 
-// ClearColor builds a float RGBA color clear value.
+// Builds a float RGBA color clear value
 func ClearColor(r, g, b, a float32) ClearValue {
 	var cv ClearValue
 	f := (*[4]float32)(unsafe.Pointer(&cv[0]))
@@ -23,7 +23,7 @@ func ClearColor(r, g, b, a float32) ClearValue {
 	return cv
 }
 
-// ClearDepthStencil builds a depth/stencil clear value.
+// Builds a depth/stencil clear value
 func ClearDepthStencil(depth float32, stencil uint32) ClearValue {
 	var cv ClearValue
 	*(*float32)(unsafe.Pointer(&cv[0])) = depth
@@ -53,8 +53,7 @@ type ImageMemoryBarrier2 struct {
 	SubresourceRange    ImageSubresourceRange
 }
 
-// CmdPipelineBarrier2 records a VkDependencyInfo carrying image barriers. This
-// is the single layout-transition primitive reused across the project.
+// Records image layout-transition barriers through one VkDependencyInfo
 func CmdPipelineBarrier2(cb CommandBuffer, barriers []ImageMemoryBarrier2) {
 	if len(barriers) == 0 {
 		return
@@ -105,6 +104,7 @@ type BufferImageCopy struct {
 	ImageExtent       Extent3D
 }
 
+// Copies buffer regions into an image already in TRANSFER_DST layout; LayerCount defaults to 1
 func CmdCopyBufferToImage(cb CommandBuffer, src Buffer, dst Image, layout ImageLayout, regions []BufferImageCopy) {
 	if len(regions) == 0 {
 		return
@@ -168,6 +168,7 @@ func fillAttachment(dst *C.VkRenderingAttachmentInfo, a *RenderingAttachmentInfo
 	dst.clearValue = a.ClearValue.c()
 }
 
+// Begins dynamic rendering with the given attachments (no render pass); LayerCount defaults to 1
 func CmdBeginRendering(cb CommandBuffer, ri RenderingInfo) {
 	lc := ri.LayerCount
 	if lc == 0 {
@@ -257,8 +258,7 @@ func CmdBindIndexBuffer(cb CommandBuffer, b Buffer, offset uint64, indexType Ind
 		C.VkBuffer(unsafe.Pointer(b)), C.VkDeviceSize(offset), C.VkIndexType(indexType))
 }
 
-// CmdPushConstants uploads size bytes from data at the given offset. data must
-// point at least size bytes (e.g. &myStruct or &slice[0]).
+// Uploads size bytes of push constants from data (must point at least size bytes, e.g. &myStruct)
 func CmdPushConstants(cb CommandBuffer, layout PipelineLayout, stages ShaderStageFlags, offset, size uint32, data unsafe.Pointer) {
 	C.vkCmdPushConstants(C.VkCommandBuffer(unsafe.Pointer(cb)),
 		C.VkPipelineLayout(unsafe.Pointer(layout)), C.VkShaderStageFlags(stages),

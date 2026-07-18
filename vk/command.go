@@ -25,7 +25,7 @@ func DestroyCommandPool(d Device, p CommandPool) {
 	C.vkDestroyCommandPool(C.VkDevice(unsafe.Pointer(d)), C.VkCommandPool(unsafe.Pointer(p)), nil)
 }
 
-// AllocateCommandBuffers allocates count primary command buffers from the pool.
+// Allocates count primary command buffers from the pool
 func AllocateCommandBuffers(d Device, pool CommandPool, count uint32) ([]CommandBuffer, error) {
 	info := C.VkCommandBufferAllocateInfo{
 		sType:              C.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -79,7 +79,7 @@ type SubmitInfo2 struct {
 	SignalSemaphores []SemaphoreSubmitInfo
 }
 
-// semaphoreInfosC marshals a semaphore submit-info array into the arena.
+// Marshals a semaphore submit-info array into the arena
 func semaphoreInfosC(a *arena, infos []SemaphoreSubmitInfo) *C.VkSemaphoreSubmitInfo {
 	n := len(infos)
 	if n == 0 {
@@ -96,7 +96,7 @@ func semaphoreInfosC(a *arena, infos []SemaphoreSubmitInfo) *C.VkSemaphoreSubmit
 	return p
 }
 
-// commandBufferInfosC marshals a command-buffer submit-info array into the arena.
+// Marshals a command-buffer submit-info array into the arena
 func commandBufferInfosC(a *arena, cbs []CommandBuffer) *C.VkCommandBufferSubmitInfo {
 	n := len(cbs)
 	if n == 0 {
@@ -111,7 +111,7 @@ func commandBufferInfosC(a *arena, cbs []CommandBuffer) *C.VkCommandBufferSubmit
 	return p
 }
 
-// QueueSubmit2 submits sync2 batches, optionally signaling fence on completion.
+// Submits sync2 batches, optionally signaling fence on completion
 func QueueSubmit2(q Queue, submits []SubmitInfo2, fence Fence) error {
 	var a arena
 	defer a.free()

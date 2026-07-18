@@ -39,6 +39,7 @@ type MemoryAllocateInfo struct {
 	DeviceAddress   bool
 }
 
+// Allocates device memory, chaining the DEVICE_ADDRESS flag when requested
 func AllocateMemory(d Device, ai MemoryAllocateInfo) (DeviceMemory, error) {
 	info := C.VkMemoryAllocateInfo{
 		sType:           C.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -76,7 +77,7 @@ func BindImageMemory(d Device, img Image, m DeviceMemory, offset uint64) error {
 		C.VkImage(unsafe.Pointer(img)), C.VkDeviceMemory(unsafe.Pointer(m)), C.VkDeviceSize(offset)))
 }
 
-// MapMemory returns a host pointer to the mapped range. Use MemCopy to write.
+// Maps the range and returns a host pointer; write through MemCopy
 func MapMemory(d Device, m DeviceMemory, offset, size uint64) (unsafe.Pointer, error) {
 	var p unsafe.Pointer
 	err := check(C.vkMapMemory(C.VkDevice(unsafe.Pointer(d)),
@@ -91,8 +92,7 @@ func UnmapMemory(d Device, m DeviceMemory) {
 	C.vkUnmapMemory(C.VkDevice(unsafe.Pointer(d)), C.VkDeviceMemory(unsafe.Pointer(m)))
 }
 
-// GetBufferDeviceAddress returns the GPU address for a buffer created with
-// BufferUsageShaderDeviceAddress, backed by BDA memory.
+// Returns the GPU address of a buffer created with BufferUsageShaderDeviceAddress on BDA-capable memory
 func GetBufferDeviceAddress(d Device, b Buffer) uint64 {
 	info := C.VkBufferDeviceAddressInfo{
 		sType:  C.VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -101,8 +101,7 @@ func GetBufferDeviceAddress(d Device, b Buffer) uint64 {
 	return uint64(C.vkGetBufferDeviceAddress(C.VkDevice(unsafe.Pointer(d)), &info))
 }
 
-// FindMemoryType picks a memory type index whose bit is set in typeBits and
-// whose properties include all of want. Returns an error if none match.
+// Picks a memory type index allowed by typeBits whose properties include all of want
 func FindMemoryType(props PhysicalDeviceMemoryProperties, typeBits uint32, want MemoryPropertyFlags) (uint32, error) {
 	for i, mt := range props.MemoryTypes {
 		if typeBits&(1<<uint(i)) == 0 {

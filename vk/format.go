@@ -16,7 +16,7 @@ type FormatProperties struct {
 	BufferFeatures        FormatFeatureFlags
 }
 
-// GetPhysicalDeviceFormatProperties2 queries the feature support for a format.
+// Queries the feature support for a format
 func GetPhysicalDeviceFormatProperties2(pd PhysicalDevice, f Format) FormatProperties {
 	var fp C.VkFormatProperties2
 	fp.sType = C.VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2

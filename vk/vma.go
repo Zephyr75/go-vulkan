@@ -76,6 +76,7 @@ type VmaAllocationInfo struct {
 	MappedData unsafe.Pointer
 }
 
+// Creates an allocator caching the device and its memory properties; mirrors vmaCreateAllocator
 func VmaCreateAllocator(ci VmaAllocatorCreateInfo) *VmaAllocator {
 	return &VmaAllocator{
 		device:   ci.Device,
@@ -86,8 +87,7 @@ func VmaCreateAllocator(ci VmaAllocatorCreateInfo) *VmaAllocator {
 
 func VmaDestroyAllocator(*VmaAllocator) {}
 
-// VmaCreateBuffer mirrors vmaCreateBuffer: create the buffer, allocate dedicated
-// memory for it, bind, and (with AllocationCreateMapped) map persistently.
+// Creates a buffer with dedicated bound memory, persistently mapped when VmaAllocationCreateMapped is set; mirrors vmaCreateBuffer
 func (a *VmaAllocator) VmaCreateBuffer(ci BufferCreateInfo, aci VmaAllocationCreateInfo) (Buffer, VmaAllocation, VmaAllocationInfo, error) {
 	buf, err := CreateBuffer(a.device, ci)
 	if err != nil {
@@ -125,8 +125,7 @@ func (a *VmaAllocator) VmaCreateBuffer(ci BufferCreateInfo, aci VmaAllocationCre
 	return buf, VmaAllocation{Memory: mem, mapped: ptr}, VmaAllocationInfo{Size: req.Size, MappedData: ptr}, nil
 }
 
-// VmaCreateImage mirrors vmaCreateImage: create the image, allocate dedicated
-// device-local memory for it, and bind.
+// Creates an image with dedicated device-local bound memory; mirrors vmaCreateImage
 func (a *VmaAllocator) VmaCreateImage(ci ImageCreateInfo, aci VmaAllocationCreateInfo) (Image, VmaAllocation, error) {
 	img, err := CreateImage(a.device, ci)
 	if err != nil {
@@ -151,8 +150,7 @@ func (a *VmaAllocator) VmaCreateImage(ci ImageCreateInfo, aci VmaAllocationCreat
 	return img, VmaAllocation{Memory: mem}, nil
 }
 
-// VmaDestroyBuffer mirrors vmaDestroyBuffer: unmap if mapped, destroy the buffer,
-// free its memory.
+// Unmaps (if mapped), destroys the buffer, and frees its memory; mirrors vmaDestroyBuffer
 func (a *VmaAllocator) VmaDestroyBuffer(b Buffer, al VmaAllocation) {
 	if al.mapped != nil {
 		UnmapMemory(a.device, al.Memory)
@@ -161,17 +159,13 @@ func (a *VmaAllocator) VmaDestroyBuffer(b Buffer, al VmaAllocation) {
 	FreeMemory(a.device, al.Memory)
 }
 
-// VmaDestroyImage mirrors vmaDestroyImage: destroy the image and free its memory.
+// Destroys the image and frees its memory; mirrors vmaDestroyImage
 func (a *VmaAllocator) VmaDestroyImage(img Image, al VmaAllocation) {
 	DestroyImage(a.device, img)
 	FreeMemory(a.device, al.Memory)
 }
 
-// memoryType picks a memory type index from the requirement bit mask.
-// Host-writable allocations prefer a ReBAR-style DEVICE_LOCAL|HOST_VISIBLE|
-// HOST_COHERENT type (fast CPU writes straight to VRAM), falling back to plain
-// HOST_VISIBLE|HOST_COHERENT; device-only allocations take DEVICE_LOCAL. This
-// is the heap walk VMA normally hides.
+// Picks a memory type from the requirement mask: host-writable requests prefer ReBAR-style DEVICE_LOCAL|HOST_VISIBLE|HOST_COHERENT then plain host-visible, others take DEVICE_LOCAL
 func (a *VmaAllocator) memoryType(bits uint32, flags VmaAllocationCreateFlags) (uint32, error) {
 	if flags&VmaAllocationCreateHostAccessSequentialWrite != 0 {
 		if idx, err := FindMemoryType(a.memProps, bits,

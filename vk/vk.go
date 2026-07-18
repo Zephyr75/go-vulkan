@@ -100,9 +100,7 @@ type (
 
 // ---- string array marshaling --------------------------------------------
 
-// cStrings converts a []string to a C **char plus count. The returned free
-// function releases every allocation; call it (deferred) after the C call that
-// consumes the array.
+// Converts a []string to a C **char plus count; call the returned free function (deferred) after the C call that consumes the array
 func cStrings(ss []string) (**C.char, C.uint32_t, func()) {
 	if len(ss) == 0 {
 		return nil, 0, func() {}
@@ -123,8 +121,7 @@ func cStrings(ss []string) (**C.char, C.uint32_t, func()) {
 
 // ---- two-call enumeration helper ----------------------------------------
 
-// Runs the classic Vulkan (count, nil) then (count, ptr) pattern.
-// f receives a pointer to the count and a pointer to the first element of a caller-owned slice 
+// Runs the classic Vulkan (count, nil) then (count, ptr) two-call pattern and returns the filled slice
 func enumerate[T any](f func(count *C.uint32_t, out *T) C.VkResult) ([]T, error) {
 	var count C.uint32_t
 	if err := check(f(&count, nil)); err != nil {
@@ -140,8 +137,7 @@ func enumerate[T any](f func(count *C.uint32_t, out *T) C.VkResult) ([]T, error)
 	return out[:count], nil
 }
 
-// Runs the classic Vulkan (count, nil) then (count, ptr) pattern for functions with no VkResult.
-// f receives a pointer to the count and a pointer to the first element of a caller-owned slice 
+// Runs the two-call pattern for enumeration functions that return no VkResult
 func enumerateVoid[T any](f func(count *C.uint32_t, out *T)) []T {
 	var count C.uint32_t
 	f(&count, nil)

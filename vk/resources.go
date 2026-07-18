@@ -12,6 +12,7 @@ type BufferCreateInfo struct {
 	Usage BufferUsageFlags
 }
 
+// Creates an exclusive-sharing buffer (no memory bound yet)
 func CreateBuffer(d Device, ci BufferCreateInfo) (Buffer, error) {
 	info := C.VkBufferCreateInfo{
 		sType:       C.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -41,6 +42,7 @@ type ImageCreateInfo struct {
 	Usage       ImageUsageFlags
 }
 
+// Creates an image with the fixed defaults documented on ImageCreateInfo; Mip/ArrayLayers default to 1
 func CreateImage(d Device, ci ImageCreateInfo) (Image, error) {
 	if ci.MipLevels == 0 {
 		ci.MipLevels = 1

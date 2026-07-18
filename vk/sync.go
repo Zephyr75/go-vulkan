@@ -7,8 +7,7 @@ import "C"
 
 import "unsafe"
 
-// CreateFence creates a VkFence. Pass FenceCreateSignaled to start signaled
-// (the frames-in-flight idiom waits on the fence before recording frame 0).
+// Creates a fence; pass FenceCreateSignaled to start signaled (frames-in-flight idiom)
 func CreateFence(d Device, flags FenceCreateFlags) (Fence, error) {
 	info := C.VkFenceCreateInfo{
 		sType: C.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -38,8 +37,7 @@ func DestroySemaphore(d Device, s Semaphore) {
 	C.vkDestroySemaphore(C.VkDevice(unsafe.Pointer(d)), C.VkSemaphore(unsafe.Pointer(s)), nil)
 }
 
-// WaitForFences blocks until all (waitAll) or any of the fences signal, or the
-// timeout (ns) elapses. A timeout returns vk.Timeout as the error.
+// Blocks until all (waitAll) or any fence signals, or the timeout (ns) elapses returning vk.Timeout
 func WaitForFences(d Device, fences []Fence, waitAll bool, timeout uint64) error {
 	if len(fences) == 0 {
 		return nil

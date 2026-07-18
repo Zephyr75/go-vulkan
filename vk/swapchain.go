@@ -107,7 +107,7 @@ type SwapchainCreateInfo struct {
 	OldSwapchain     SwapchainKHR
 }
 
-// CreateSwapchainKHR creates a swapchain; ImageArrayLayers defaults to 1 when zero.
+// Creates a swapchain; ImageArrayLayers defaults to 1 when zero
 func CreateSwapchainKHR(d Device, ci SwapchainCreateInfo) (SwapchainKHR, error) {
 	if ci.ImageArrayLayers == 0 {
 		ci.ImageArrayLayers = 1
@@ -140,7 +140,7 @@ func CreateSwapchainKHR(d Device, ci SwapchainCreateInfo) (SwapchainKHR, error) 
 	return SwapchainKHR(unsafe.Pointer(out)), nil
 }
 
-// Returns the presentable images owned by a swapchain
+// Lists the presentable images owned by a swapchain
 func GetSwapchainImagesKHR(d Device, sc SwapchainKHR) ([]Image, error) {
 	dev := C.VkDevice(unsafe.Pointer(d))
 	swap := C.VkSwapchainKHR(unsafe.Pointer(sc))
@@ -157,12 +157,10 @@ func GetSwapchainImagesKHR(d Device, sc SwapchainKHR) ([]Image, error) {
 	return res, nil
 }
 
-// DestroySwapchainKHR destroys a swapchain.
 func DestroySwapchainKHR(d Device, sc SwapchainKHR) {
 	C.vkDestroySwapchainKHR(C.VkDevice(unsafe.Pointer(d)), C.VkSwapchainKHR(unsafe.Pointer(sc)), nil)
 }
 
-// DestroySurfaceKHR destroys a surface.
 func DestroySurfaceKHR(i Instance, s SurfaceKHR) {
 	C.vkDestroySurfaceKHR(C.VkInstance(unsafe.Pointer(i)), C.VkSurfaceKHR(unsafe.Pointer(s)), nil)
 }
@@ -184,7 +182,7 @@ type ImageViewCreateInfo struct {
 	SubresourceRange ImageSubresourceRange
 }
 
-// CreateImageView creates an image view.
+// Creates an image view over a subresource range of an image
 func CreateImageView(d Device, ci ImageViewCreateInfo) (ImageView, error) {
 	info := C.VkImageViewCreateInfo{
 		sType:    C.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -206,17 +204,13 @@ func CreateImageView(d Device, ci ImageViewCreateInfo) (ImageView, error) {
 	return ImageView(unsafe.Pointer(out)), nil
 }
 
-// DestroyImageView destroys an image view.
 func DestroyImageView(d Device, v ImageView) {
 	C.vkDestroyImageView(C.VkDevice(unsafe.Pointer(d)), C.VkImageView(unsafe.Pointer(v)), nil)
 }
 
 // ---- present -------------------------------------------------------------
 
-// AcquireNextImageKHR returns the index of the next swapchain image. On a
-// resize it returns the image index alongside a non-nil error equal to
-// ErrOutOfDateKHR or SuboptimalKHR — the caller branches on those rather than
-// treating them as fatal.
+// Acquires the next swapchain image index; ErrOutOfDateKHR/SuboptimalKHR are returned for the caller to branch on, not fatal
 func AcquireNextImageKHR(d Device, sc SwapchainKHR, timeout uint64, sem Semaphore, fence Fence) (uint32, error) {
 	var idx C.uint32_t
 	r := C.vkAcquireNextImageKHR(C.VkDevice(unsafe.Pointer(d)),
@@ -225,8 +219,7 @@ func AcquireNextImageKHR(d Device, sc SwapchainKHR, timeout uint64, sem Semaphor
 	return uint32(idx), check(r)
 }
 
-// QueuePresentKHR presents one swapchain image after waiting on wait. Same
-// out-of-date/suboptimal error handling as AcquireNextImageKHR.
+// Presents one swapchain image after waiting on wait, with the same out-of-date/suboptimal handling as AcquireNextImageKHR
 func QueuePresentKHR(q Queue, wait Semaphore, sc SwapchainKHR, imageIndex uint32) error {
 	sem := C.VkSemaphore(unsafe.Pointer(wait))
 	swap := C.VkSwapchainKHR(unsafe.Pointer(sc))

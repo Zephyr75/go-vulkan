@@ -31,7 +31,7 @@ type DescriptorSetLayoutCreateInfo struct {
 	UseBindingFlags bool
 }
 
-// bindingsC marshals the binding slice into the arena.
+// Marshals the binding slice into the arena
 func bindingsC(a *arena, in []DescriptorSetLayoutBinding) *C.VkDescriptorSetLayoutBinding {
 	n := len(in)
 	if n == 0 {
@@ -48,8 +48,7 @@ func bindingsC(a *arena, in []DescriptorSetLayoutBinding) *C.VkDescriptorSetLayo
 	return p
 }
 
-// bindingFlagsC builds the VkDescriptorSetLayoutBindingFlagsCreateInfo pNext
-// (descriptor indexing) from each binding's BindingFlags.
+// Builds the VkDescriptorSetLayoutBindingFlagsCreateInfo pNext (descriptor indexing) from each binding's BindingFlags
 func bindingFlagsC(a *arena, in []DescriptorSetLayoutBinding) *C.VkDescriptorSetLayoutBindingFlagsCreateInfo {
 	n := len(in)
 	bf := (*C.VkDescriptorBindingFlags)(a.alloc(n, unsafe.Sizeof(C.VkDescriptorBindingFlags(0))))
@@ -64,6 +63,7 @@ func bindingFlagsC(a *arena, in []DescriptorSetLayoutBinding) *C.VkDescriptorSet
 	return out
 }
 
+// Creates a descriptor set layout, chaining per-binding flags when UseBindingFlags is set
 func CreateDescriptorSetLayout(d Device, ci DescriptorSetLayoutCreateInfo) (DescriptorSetLayout, error) {
 	var a arena
 	defer a.free()
@@ -101,6 +101,7 @@ type DescriptorPoolCreateInfo struct {
 	PoolSizes []DescriptorPoolSize
 }
 
+// Creates a descriptor pool sized by the pool sizes
 func CreateDescriptorPool(d Device, ci DescriptorPoolCreateInfo) (DescriptorPool, error) {
 	n := len(ci.PoolSizes)
 	sizes := (*C.VkDescriptorPoolSize)(C.calloc(C.size_t(n), C.size_t(unsafe.Sizeof(C.VkDescriptorPoolSize{}))))
@@ -138,8 +139,7 @@ type DescriptorSetAllocateInfo struct {
 	VariableCounts []uint32
 }
 
-// variableCountsC builds the VkDescriptorSetVariableDescriptorCountAllocateInfo
-// pNext (final size of each variable-count binding).
+// Builds the VkDescriptorSetVariableDescriptorCountAllocateInfo pNext (final size of each variable-count binding)
 func variableCountsC(a *arena, counts []uint32) *C.VkDescriptorSetVariableDescriptorCountAllocateInfo {
 	n := len(counts)
 	vc := (*C.uint32_t)(a.alloc(n, unsafe.Sizeof(C.uint32_t(0))))
@@ -154,6 +154,7 @@ func variableCountsC(a *arena, counts []uint32) *C.VkDescriptorSetVariableDescri
 	return out
 }
 
+// Allocates one descriptor set per layout, sizing variable-count bindings from VariableCounts
 func AllocateDescriptorSets(d Device, ai DescriptorSetAllocateInfo) ([]DescriptorSet, error) {
 	n := len(ai.Layouts)
 	if n == 0 {
@@ -205,7 +206,7 @@ type WriteDescriptorSet struct {
 	ImageInfo       []DescriptorImageInfo
 }
 
-// imageInfoC marshals the image descriptor array into the arena.
+// Marshals the image descriptor array into the arena
 func imageInfoC(a *arena, in []DescriptorImageInfo) *C.VkDescriptorImageInfo {
 	n := len(in)
 	if n == 0 {
@@ -221,6 +222,7 @@ func imageInfoC(a *arena, in []DescriptorImageInfo) *C.VkDescriptorImageInfo {
 	return p
 }
 
+// Writes image descriptors into their sets in one vkUpdateDescriptorSets call
 func UpdateDescriptorSets(d Device, writes []WriteDescriptorSet) {
 	if len(writes) == 0 {
 		return

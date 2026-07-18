@@ -11,8 +11,7 @@ import (
 	"unsafe"
 )
 
-// CreateShaderModule wraps SPIR-V bytes (must be a multiple of 4). Typically the
-// go:embed'ed output of glslc/slangc.
+// Wraps SPIR-V bytes (must be a multiple of 4) in a shader module
 func CreateShaderModule(d Device, code []byte) (ShaderModule, error) {
 	if len(code) == 0 || len(code)%4 != 0 {
 		return 0, Result(int32(C.VK_ERROR_INITIALIZATION_FAILED))
@@ -48,6 +47,7 @@ type PipelineLayoutCreateInfo struct {
 	PushConstantRanges []PushConstantRange
 }
 
+// Creates a pipeline layout from set layouts and push constant ranges
 func CreatePipelineLayout(d Device, ci PipelineLayoutCreateInfo) (PipelineLayout, error) {
 	var frees []unsafe.Pointer
 	defer func() {
@@ -107,7 +107,7 @@ func (a *arena) alloc(n int, size uintptr) unsafe.Pointer {
 	return p
 }
 
-// cstr copies a Go string into C heap.
+// Copies a Go string into C heap
 func (a *arena) cstr(s string) *C.char {
 	p := C.CString(s)
 	a.frees = append(a.frees, unsafe.Pointer(p))
@@ -433,8 +433,7 @@ func (s *PipelineRenderingCreateInfo) c(a *arena) *C.VkPipelineRenderingCreateIn
 	return out
 }
 
-// stages marshals the shader stage array; kept a free function since it is a
-// slice, not a single sub-state.
+// Marshals the shader stage array into the arena
 func stagesC(a *arena, in []PipelineShaderStageCreateInfo) (*C.VkPipelineShaderStageCreateInfo, C.uint32_t) {
 	n := len(in)
 	if n == 0 {
@@ -451,9 +450,7 @@ func stagesC(a *arena, in []PipelineShaderStageCreateInfo) (*C.VkPipelineShaderS
 	return p, C.uint32_t(n)
 }
 
-// CreateGraphicsPipeline marshals ci into a VkGraphicsPipelineCreateInfo and
-// calls vkCreateGraphicsPipelines for a single pipeline. It is pure translation:
-// every value comes from ci, nothing is defaulted.
+// Marshals ci 1:1 into a VkGraphicsPipelineCreateInfo and creates a single pipeline; nothing is defaulted
 func CreateGraphicsPipeline(d Device, ci GraphicsPipelineCreateInfo) (Pipeline, error) {
 	var a arena
 	defer a.free()
