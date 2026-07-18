@@ -17,10 +17,10 @@ type FormatProperties struct {
 }
 
 // GetPhysicalDeviceFormatProperties2 queries the feature support for a format.
-func GetPhysicalDeviceFormatProperties2(pd PhysicalDevice, format Format) FormatProperties {
+func GetPhysicalDeviceFormatProperties2(pd PhysicalDevice, f Format) FormatProperties {
 	var fp C.VkFormatProperties2
 	fp.sType = C.VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2
-	C.vkGetPhysicalDeviceFormatProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), C.VkFormat(format), &fp)
+	C.vkGetPhysicalDeviceFormatProperties2(C.VkPhysicalDevice(unsafe.Pointer(pd)), C.VkFormat(f), &fp)
 	p := fp.formatProperties
 	return FormatProperties{
 		LinearTilingFeatures:  FormatFeatureFlags(p.linearTilingFeatures),

@@ -140,7 +140,7 @@ func CreateSwapchainKHR(d Device, ci SwapchainCreateInfo) (SwapchainKHR, error) 
 	return SwapchainKHR(unsafe.Pointer(out)), nil
 }
 
-// GetSwapchainImagesKHR returns the presentable images owned by a swapchain.
+// Returns the presentable images owned by a swapchain
 func GetSwapchainImagesKHR(d Device, sc SwapchainKHR) ([]Image, error) {
 	dev := C.VkDevice(unsafe.Pointer(d))
 	swap := C.VkSwapchainKHR(unsafe.Pointer(sc))

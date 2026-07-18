@@ -117,6 +117,7 @@ int main(int argc, char* argv[])
 	chk(SDL_Init(SDL_INIT_VIDEO));
 	chk(SDL_Vulkan_LoadLibrary(NULL));
 	volkInitialize();
+
 	// Instance
 	VkApplicationInfo appInfo{ .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "How to Vulkan", .apiVersion = VK_API_VERSION_1_3 };
 	uint32_t instanceExtensionsCount{ 0 };
@@ -129,6 +130,7 @@ int main(int argc, char* argv[])
 	};
 	chk(vkCreateInstance(&instanceCI, nullptr, &instance));
 	volkLoadInstance(instance);
+
 	// Device
 	uint32_t deviceCount{ 0 };
 	chk(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
@@ -142,6 +144,7 @@ int main(int argc, char* argv[])
 	VkPhysicalDeviceProperties2 deviceProperties{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 	vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
 	std::cout << "Selected device: " << deviceProperties.properties.deviceName << "\n";
+
 	// Find a queue family for graphics
 	uint32_t queueFamilyCount{ 0 };
 	vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
@@ -155,6 +158,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	chk(SDL_Vulkan_GetPresentationSupport(instance, devices[deviceIndex], queueFamily));
+
 	// Logical device
 	const float qfpriorities{ 1.0f };
 	VkDeviceQueueCreateInfo queueCI{ .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = queueFamily, .queueCount = 1, .pQueuePriorities = &qfpriorities };
@@ -173,10 +177,12 @@ int main(int argc, char* argv[])
 	};
 	chk(vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &device));
 	vkGetDeviceQueue(device, queueFamily, 0, &queue);
+
 	// VMA
 	VmaVulkanFunctions vkFunctions{ .vkGetInstanceProcAddr = vkGetInstanceProcAddr, .vkGetDeviceProcAddr = vkGetDeviceProcAddr, .vkCreateImage = vkCreateImage };
 	VmaAllocatorCreateInfo allocatorCI{ .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT, .physicalDevice = devices[deviceIndex], .device = device, .pVulkanFunctions = &vkFunctions, .instance = instance };
 	chk(vmaCreateAllocator(&allocatorCI, &allocator));
+
 	// Window and surface
 	SDL_Window* window = SDL_CreateWindow("How to Vulkan", 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 	assert(window);
@@ -188,6 +194,7 @@ int main(int argc, char* argv[])
 	if (surfaceCaps.currentExtent.width == 0xFFFFFFFF) {
 		swapchainExtent = { .width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y) };
 	}
+
 	// Swap chain
 	const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
 	VkSwapchainCreateInfoKHR swapchainCI{
@@ -213,6 +220,7 @@ int main(int argc, char* argv[])
 		VkImageViewCreateInfo viewCI{ .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = swapchainImages[i], .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = imageFormat, .subresourceRange{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1 } };
 		chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
 	}
+
 	// Depth attachment
 	std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
 	VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
@@ -241,6 +249,7 @@ int main(int argc, char* argv[])
 	chk(vmaCreateImage(allocator, &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
 	VkImageViewCreateInfo depthViewCI{ .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = depthImage, .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = depthFormat, .subresourceRange{.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 } };
 	chk(vkCreateImageView(device, &depthViewCI, nullptr, &depthImageView));
+
 	// Mesh data
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -267,6 +276,7 @@ int main(int argc, char* argv[])
 	chk(vmaCreateBuffer(allocator, &bufferCI, &vBufferAllocCI, &vBuffer, &vBufferAllocation, &vBufferAllocInfo));
 	memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufSize);
 	memcpy(((char*)vBufferAllocInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
+
 	// Shader data buffers
 	for (auto i = 0; i < maxFramesInFlight; i++) {
 		VkBufferCreateInfo uBufferCI{ .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = sizeof(ShaderData), .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
@@ -275,6 +285,7 @@ int main(int argc, char* argv[])
 		VkBufferDeviceAddressInfo uBufferBdaInfo{ .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .buffer = shaderDataBuffers[i].buffer };
 		shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(device, &uBufferBdaInfo);
 	}
+
 	// Sync objects
 	VkSemaphoreCreateInfo semaphoreCI{ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 	VkFenceCreateInfo fenceCI{ .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
@@ -286,11 +297,13 @@ int main(int argc, char* argv[])
 	for (auto& semaphore : renderCompleteSemaphores) {
 		chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
 	}
+
 	// Command pool
 	VkCommandPoolCreateInfo commandPoolCI{ .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, .queueFamilyIndex = queueFamily };
 	chk(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
 	VkCommandBufferAllocateInfo cbAllocCI{ .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = commandPool, .commandBufferCount = maxFramesInFlight };
 	chk(vkAllocateCommandBuffers(device, &cbAllocCI, commandBuffers.data()));
+
 	// Texture images
 	std::vector<VkDescriptorImageInfo> textureDescriptors{};
 	for (auto i = 0; i < textures.size(); i++) {
@@ -313,6 +326,7 @@ int main(int argc, char* argv[])
 		chk(vmaCreateImage(allocator, &texImgCI, &texImageAllocCI, &textures[i].image, &textures[i].allocation, nullptr));
 		VkImageViewCreateInfo texVewCI{ .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = textures[i].image, .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = texImgCI.format, .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1 } };
 		chk(vkCreateImageView(device, &texVewCI, nullptr, &textures[i].view));
+
 		// Upload
 		VkBuffer imgSrcBuffer{};
 		VmaAllocation imgSrcAllocation{};
@@ -372,6 +386,7 @@ int main(int argc, char* argv[])
 		chk(vkWaitForFences(device, 1, &fenceOneTime, VK_TRUE, UINT64_MAX));
 		vkDestroyFence(device, fenceOneTime, nullptr);
 		vmaDestroyBuffer(allocator, imgSrcBuffer, imgSrcAllocation);
+
 		// Sampler
 		VkSamplerCreateInfo samplerCI{
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -386,6 +401,7 @@ int main(int argc, char* argv[])
 		ktxTexture_Destroy(ktxTexture);
 		textureDescriptors.push_back({ .sampler = textures[i].sampler, .imageView = textures[i].view, .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL });
 	}
+
 	// Descriptor (indexing)
 	VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
 	VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO, .bindingCount = 1, .pBindingFlags = &descVariableFlag };
@@ -401,6 +417,7 @@ int main(int argc, char* argv[])
 	chk(vkAllocateDescriptorSets(device, &texDescSetAlloc, &descriptorSetTex));
 	VkWriteDescriptorSet writeDescSet{ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = descriptorSetTex, .dstBinding = 0, .descriptorCount = static_cast<uint32_t>(textureDescriptors.size()), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = textureDescriptors.data() };
 	vkUpdateDescriptorSets(device, 1, &writeDescSet, 0, nullptr);
+
 	// Initialize Slang shader compiler
 	slang::createGlobalSession(slangGlobalSession.writeRef());
 	auto slangTargets{ std::to_array<slang::TargetDesc>({ {.format{SLANG_SPIRV}, .profile{slangGlobalSession->findProfile("spirv_1_4")} } }) };
@@ -415,6 +432,7 @@ int main(int argc, char* argv[])
 	VkShaderModuleCreateInfo shaderModuleCI{ .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = spirv->getBufferSize(), .pCode = (uint32_t*)spirv->getBufferPointer() };
 	VkShaderModule shaderModule{};
 	chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
+
 	// Pipeline
 	VkPushConstantRange pushConstantRange{ .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .size = sizeof(VkDeviceAddress) };
 	VkPipelineLayoutCreateInfo pipelineLayoutCI{ .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1, .pSetLayouts = &descriptorSetLayoutTex, .pushConstantRangeCount = 1, .pPushConstantRanges = &pushConstantRange };
@@ -462,14 +480,17 @@ int main(int argc, char* argv[])
 		.layout = pipelineLayout
 	};
 	chk(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &pipeline));
+
 	// Render loop
 	uint64_t lastTime{ SDL_GetTicks() };
 	bool quit{ false };
 	while (!quit) {
+
 		// Sync
 		chk(vkWaitForFences(device, 1, &fences[frameIndex], true, UINT64_MAX));
 		chk(vkResetFences(device, 1, &fences[frameIndex]));
 		chkSwapchain(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAcquiredSemaphores[frameIndex], VK_NULL_HANDLE, &imageIndex));
+
 		// Update shader data
 		shaderData.projection = glm::perspective(glm::radians(45.0f), (float)windowSize.x / (float)windowSize.y, 0.1f, 32.0f);
 		shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
@@ -478,6 +499,7 @@ int main(int argc, char* argv[])
 			shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
 		}
 		memcpy(shaderDataBuffers[frameIndex].allocationInfo.pMappedData, &shaderData, sizeof(ShaderData));
+
 		// Build command buffer
 		auto cb = commandBuffers[frameIndex];
 		chk(vkResetCommandBuffer(cb, 0));
@@ -560,6 +582,7 @@ int main(int argc, char* argv[])
 		VkDependencyInfo barrierPresentDependencyInfo{ .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrierPresent };
 		vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
 		chk(vkEndCommandBuffer(cb));
+
 		// Submit to graphics queue
 		VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		VkSubmitInfo submitInfo{
@@ -583,6 +606,7 @@ int main(int argc, char* argv[])
 			.pImageIndices = &imageIndex
 		};
 		chkSwapchain(vkQueuePresentKHR(queue, &presentInfo));
+
 		// Event polling
 		float elapsedTime{ (SDL_GetTicks() - lastTime) / 1000.0f };
 		lastTime = SDL_GetTicks();
@@ -613,6 +637,7 @@ int main(int argc, char* argv[])
 				updateSwapchain = true;
 			}
 		}
+
 		if (updateSwapchain) {
 			chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 			updateSwapchain = false;
@@ -649,6 +674,7 @@ int main(int argc, char* argv[])
 			chk(vkCreateImageView(device, &viewCI, nullptr, &depthImageView));
 		}
 	}
+
 	// Tear down
 	chk(vkDeviceWaitIdle(device));
 	for (auto i = 0; i < maxFramesInFlight; i++) {
