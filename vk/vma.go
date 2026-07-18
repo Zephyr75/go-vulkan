@@ -9,15 +9,12 @@ import "unsafe"
 // optional persistent map) instead of VMA's sub-allocation, which is all a
 // tutorial-scale renderer needs.
 
-// VmaAllocatorCreateFlags mirrors VmaAllocatorCreateFlags (supported subset).
+// Supported subset of the allocator create flags
 type VmaAllocatorCreateFlags uint32
 
-// VmaAllocatorCreateBufferDeviceAddressBit mirrors
-// VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT: buffers created with
-// BufferUsageShaderDeviceAddress get device-address-capable memory.
+// Gives buffers created with BufferUsageShaderDeviceAddress device-address-capable memory
 const VmaAllocatorCreateBufferDeviceAddressBit VmaAllocatorCreateFlags = 1 << 0
 
-// VmaAllocatorCreateInfo mirrors VmaAllocatorCreateInfo.
 type VmaAllocatorCreateInfo struct {
 	Flags          VmaAllocatorCreateFlags
 	PhysicalDevice PhysicalDevice
@@ -25,58 +22,50 @@ type VmaAllocatorCreateInfo struct {
 	Instance       Instance
 }
 
-// VmaAllocator stands in for VmaAllocator: it caches the device and its memory
-// properties so per-resource allocations can pick a memory type.
+// Caches the device and its memory properties so per-resource allocations can pick a memory type
 type VmaAllocator struct {
 	device   Device
 	memProps PhysicalDeviceMemoryProperties
 	flags    VmaAllocatorCreateFlags
 }
 
-// VmaAllocationCreateFlags mirrors VmaAllocationCreateFlags (supported subset).
+// Supported subset of the allocation create flags
 type VmaAllocationCreateFlags uint32
 
 const (
-	// VmaAllocationCreateDedicatedMemory is accepted for parity with
-	// VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; every allocation here is
-	// dedicated already.
+	// Accepted for parity; every allocation here is dedicated already
 	VmaAllocationCreateDedicatedMemory VmaAllocationCreateFlags = 1 << 0
-	// VmaAllocationCreateMapped keeps the allocation persistently mapped; the
-	// pointer is returned in AllocationInfo.MappedData.
+	// Keeps the allocation persistently mapped; the pointer is returned in VmaAllocationInfo.MappedData
 	VmaAllocationCreateMapped VmaAllocationCreateFlags = 1 << 1
-	// VmaAllocationCreateHostAccessSequentialWrite selects CPU-writable memory.
+	// Selects CPU-writable memory
 	VmaAllocationCreateHostAccessSequentialWrite VmaAllocationCreateFlags = 1 << 2
-	// VmaAllocationCreateHostAccessAllowTransferInstead is accepted for parity;
-	// this allocator never falls back to a staging transfer.
+	// Accepted for parity; this allocator never falls back to a staging transfer
 	VmaAllocationCreateHostAccessAllowTransferInstead VmaAllocationCreateFlags = 1 << 3
 )
 
-// VmaMemoryUsage mirrors VmaMemoryUsage; only Auto is supported.
+// Only Auto is supported
 type VmaMemoryUsage uint32
 
-// VmaMemoryUsageAuto mirrors VMA_MEMORY_USAGE_AUTO.
 const VmaMemoryUsageAuto VmaMemoryUsage = 0
 
-// VmaAllocationCreateInfo mirrors VmaAllocationCreateInfo.
 type VmaAllocationCreateInfo struct {
 	Flags VmaAllocationCreateFlags
 	Usage VmaMemoryUsage
 }
 
-// VmaAllocation stands in for VmaAllocation: the dedicated memory backing one
-// resource, plus its persistent mapping when one was requested.
+// Dedicated memory backing one resource, plus its persistent mapping when one was requested
 type VmaAllocation struct {
 	Memory DeviceMemory
 	mapped unsafe.Pointer
 }
 
-// VmaAllocationInfo mirrors VmaAllocationInfo (supported subset).
+// Supported subset of VMA's allocation info
 type VmaAllocationInfo struct {
 	Size       uint64
 	MappedData unsafe.Pointer
 }
 
-// Creates an allocator caching the device and its memory properties; mirrors vmaCreateAllocator
+// Creates an allocator caching the device and its memory properties
 func VmaCreateAllocator(ci VmaAllocatorCreateInfo) *VmaAllocator {
 	return &VmaAllocator{
 		device:   ci.Device,
@@ -87,7 +76,7 @@ func VmaCreateAllocator(ci VmaAllocatorCreateInfo) *VmaAllocator {
 
 func VmaDestroyAllocator(*VmaAllocator) {}
 
-// Creates a buffer with dedicated bound memory, persistently mapped when VmaAllocationCreateMapped is set; mirrors vmaCreateBuffer
+// Creates a buffer with dedicated bound memory, persistently mapped when VmaAllocationCreateMapped is set
 func (a *VmaAllocator) VmaCreateBuffer(ci BufferCreateInfo, aci VmaAllocationCreateInfo) (Buffer, VmaAllocation, VmaAllocationInfo, error) {
 	buf, err := CreateBuffer(a.device, ci)
 	if err != nil {
@@ -125,7 +114,7 @@ func (a *VmaAllocator) VmaCreateBuffer(ci BufferCreateInfo, aci VmaAllocationCre
 	return buf, VmaAllocation{Memory: mem, mapped: ptr}, VmaAllocationInfo{Size: req.Size, MappedData: ptr}, nil
 }
 
-// Creates an image with dedicated device-local bound memory; mirrors vmaCreateImage
+// Creates an image with dedicated device-local bound memory
 func (a *VmaAllocator) VmaCreateImage(ci ImageCreateInfo, aci VmaAllocationCreateInfo) (Image, VmaAllocation, error) {
 	img, err := CreateImage(a.device, ci)
 	if err != nil {
@@ -150,7 +139,7 @@ func (a *VmaAllocator) VmaCreateImage(ci ImageCreateInfo, aci VmaAllocationCreat
 	return img, VmaAllocation{Memory: mem}, nil
 }
 
-// Unmaps (if mapped), destroys the buffer, and frees its memory; mirrors vmaDestroyBuffer
+// Unmaps (if mapped), destroys the buffer, and frees its memory
 func (a *VmaAllocator) VmaDestroyBuffer(b Buffer, al VmaAllocation) {
 	if al.mapped != nil {
 		UnmapMemory(a.device, al.Memory)
@@ -159,7 +148,7 @@ func (a *VmaAllocator) VmaDestroyBuffer(b Buffer, al VmaAllocation) {
 	FreeMemory(a.device, al.Memory)
 }
 
-// Destroys the image and frees its memory; mirrors vmaDestroyImage
+// Destroys the image and frees its memory
 func (a *VmaAllocator) VmaDestroyImage(img Image, al VmaAllocation) {
 	DestroyImage(a.device, img)
 	FreeMemory(a.device, al.Memory)

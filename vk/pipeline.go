@@ -238,8 +238,7 @@ type PipelineRenderingCreateInfo struct {
 	StencilAttachmentFormat Format
 }
 
-// GraphicsPipelineCreateInfo mirrors VkGraphicsPipelineCreateInfo. Nil sub-state
-// pointers marshal to NULL, matching Vulkan's optionality.
+// Nil sub-state pointers marshal to NULL, matching Vulkan's optionality
 type GraphicsPipelineCreateInfo struct {
 	Stages             []PipelineShaderStageCreateInfo
 	VertexInputState   *PipelineVertexInputStateCreateInfo
