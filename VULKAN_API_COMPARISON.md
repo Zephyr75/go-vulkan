@@ -12,7 +12,11 @@ repository actually wraps (`grep -rhoE 'C\.vk[A-Za-z0-9]+' --include='*.go'`).
   `vkMapMemory`, `vkBind*Memory`, `vkGet*MemoryRequirements`, `vkFreeMemory`)
   are hidden behind VMA on the site and do **not** appear as explicit `vk*`
   calls there.
-- This repo has **no VMA dependency**; it calls the raw allocation API directly.
+- This repo has **no VMA C dependency**. Instead `vk/vma.go` is a pure-Go
+  **VMA substitute** exposing the same API shape (`VmaCreateAllocator`,
+  `VmaCreateBuffer`, `VmaCreateImage`, `VmaDestroy*`) built on the raw
+  allocation wrappers below, so `cmd/howto/main.go` mirrors the reference's
+  VMA call sites 1:1.
 - The site teaches `vkQueueSubmit`; this repo uses the newer **`vkQueueSubmit2`**
   (synchronization2). Same for barriers: both use `vkCmdPipelineBarrier2`.
 
@@ -28,6 +32,7 @@ Legend: Yes recreated here | No not present here | NEW in repo, not on site.
 | vkEnumeratePhysicalDevices | Yes | Yes | Yes |
 | vkGetPhysicalDeviceProperties2 | Yes | Yes | Yes |
 | vkGetPhysicalDeviceQueueFamilyProperties | Yes | Yes | Yes |
+| vkGetPhysicalDeviceFormatProperties2 | Yes | Yes | Yes |
 | vkCreateDevice | Yes | Yes | Yes |
 | vkGetDeviceQueue | Yes | Yes | Yes |
 | vkGetBufferDeviceAddress | Yes | Yes | Yes |
@@ -63,12 +68,11 @@ Legend: Yes recreated here | No not present here | NEW in repo, not on site.
 
 | Vulkan function | Why it's missing here |
 |---|---|
-| vkGetPhysicalDeviceFormatProperties2 | Site queries format feature support (e.g. picking a depth/blit format at runtime). Repo hard-codes/assumes formats instead of probing them, so no wrapper yet. Add if runtime format negotiation is needed. |
 | vkQueueSubmit | Superseded here by **`vkQueueSubmit2`** (synchronization2). Functionally the site's submit path exists in the repo - just the newer entry point. Not a gap, a version difference. |
-| vkAllocateMemory / vkMapMemory / vkUnmapMemory / vkBindBufferMemory / vkBindImageMemory / vkGetBufferMemoryRequirements / vkGetImageMemoryRequirements / vkFreeMemory | On the site these are **hidden inside VMA**, so they aren't taught as raw calls. The repo implements them directly (see Sec 3) because it has no VMA. So: present here, just categorized under the site as "VMA-abstracted." |
+| vkAllocateMemory / vkMapMemory / vkUnmapMemory / vkBindBufferMemory / vkBindImageMemory / vkGetBufferMemoryRequirements / vkGetImageMemoryRequirements / vkFreeMemory | On the site these are **hidden inside VMA**, so they aren't taught as raw calls. The repo implements them directly (see Sec 3) and layers the `vk/vma.go` VMA substitute on top. So: present here, just categorized under the site as "VMA-abstracted." |
 
-> Net truly-absent-and-needed: **`vkGetPhysicalDeviceFormatProperties2`** only.
-> Everything else the site "uses" is either a newer variant or VMA-hidden.
+> Net truly-absent-and-needed: **nothing**. Everything the site "uses" is
+> recreated, a newer variant, or VMA-hidden (and covered by the substitute).
 
 ---
 
@@ -77,21 +81,21 @@ Legend: Yes recreated here | No not present here | NEW in repo, not on site.
 These exist here because this repo wraps Vulkan **without VMA** and covers the
 full draw/present/teardown surface the tutorial narrates but delegates.
 
-### Raw memory management (VMA replaces these on the site)
+### Raw memory management (the layer `vk/vma.go` is built on)
 | Function | Why needed here |
 |---|---|
-| vkAllocateMemory NEW | No VMA -> we allocate `VkDeviceMemory` ourselves. |
-| vkFreeMemory NEW | Symmetric teardown of the above. |
-| vkMapMemory / vkUnmapMemory NEW | Upload vertex/index/uniform data from CPU without VMA's mapping helpers. |
-| vkBindBufferMemory / vkBindImageMemory NEW | Bind our own allocations to buffers/images (VMA does this internally). |
+| vkAllocateMemory NEW | `VmaCreateBuffer`/`VmaCreateImage` allocate `VkDeviceMemory` through this. |
+| vkFreeMemory NEW | Symmetric teardown of the above (`VmaDestroy*`). |
+| vkMapMemory / vkUnmapMemory NEW | Persistent mapping behind `VmaAllocationCreateMapped`. |
+| vkBindBufferMemory / vkBindImageMemory NEW | Bind allocations to buffers/images (real VMA does this internally). |
 | vkGetBufferMemoryRequirements / vkGetImageMemoryRequirements NEW | Size/alignment/memory-type bits for allocation, normally answered by VMA. |
-| vkGetPhysicalDeviceMemoryProperties2 NEW | Pick a memory type index (device-local vs host-visible); VMA hides this heap walk. |
+| vkGetPhysicalDeviceMemoryProperties2 NEW | The memory-type heap walk `VmaAllocator` caches at creation. |
 
 ### Buffer/image lifecycle (site delegates create+alloc to VMA)
 | Function | Why needed here |
 |---|---|
-| vkCreateBuffer / vkDestroyBuffer NEW | VMA offers `vmaCreateBuffer`; raw path needs both explicitly. |
-| vkCreateImage / vkDestroyImage NEW | Same, mirror of `vmaCreateImage`. |
+| vkCreateBuffer / vkDestroyBuffer NEW | First/last step inside `VmaCreateBuffer`/`VmaDestroyBuffer`; also usable raw. |
+| vkCreateImage / vkDestroyImage NEW | Same, inside `VmaCreateImage`/`VmaDestroyImage`. |
 
 ### Draw-time command recording (narrated on site, enumerated here)
 | Function | Why needed here |
@@ -132,13 +136,16 @@ in prose; a reusable library must expose each teardown symmetric to its create.
 ## 4. Summary
 
 - **Recreated:** every core creation/binding/sync/present function the tutorial
-  teaches (Sec 1) - full triangle->mesh->texture->present path is covered.
-- **Genuinely not recreated:** just `vkGetPhysicalDeviceFormatProperties2`
-  (runtime format probing). `vkQueueSubmit` is covered via `vkQueueSubmit2`.
-- **Extra here:** the entire **raw memory layer** the site hands to VMA, plus
+  teaches (Sec 1), including runtime format probing - full
+  triangle->mesh->texture->present path is covered.
+- **Genuinely not recreated:** nothing. `vkQueueSubmit` is covered via
+  `vkQueueSubmit2`.
+- **Extra here:** the entire **raw memory layer** the site hands to VMA -
+  wrapped again by the pure-Go **VMA substitute** in `vk/vma.go` so the demo
+  keeps the reference's `vmaCreateBuffer`/`vmaCreateImage` call shape - plus
   **explicit destroy wrappers** and **draw-time `vkCmd*` recording**. Needed
-  because this is a reusable, VMA-free Go binding, not a linear tutorial - every
-  create needs a matching destroy, and no allocator hides the memory calls.
+  because this is a reusable Go binding, not a linear tutorial - every create
+  needs a matching destroy.
 
-_Generated 2026-07-03. Repo function list from source grep; site list from
+_Updated 2026-07-18. Repo function list from source grep; site list from
 howtovulkan.com chapter extraction (VMA-abstracted memory calls noted)._

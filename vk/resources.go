@@ -91,6 +91,7 @@ type SamplerCreateInfo struct {
 	MaxLod           float32
 }
 
+// Creates a sampler with fixed opaque-black border and zero min LOD
 func CreateSampler(d Device, ci SamplerCreateInfo) (Sampler, error) {
 	aniso := C.VkBool32(C.VK_FALSE)
 	if ci.AnisotropyEnable {

@@ -100,6 +100,7 @@ type PhysicalDeviceProperties struct {
 	MaxSamplerAnisotropy            float32
 }
 
+// Queries a GPU's identity (name, IDs, type) and the limits the demo needs
 func GetPhysicalDeviceProperties2(pd PhysicalDevice) PhysicalDeviceProperties {
 	var vkDeviceProperties C.VkPhysicalDeviceProperties2
 	vkDeviceProperties.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
@@ -123,6 +124,7 @@ type QueueFamilyProperties struct {
 	QueueCount uint32
 }
 
+// Lists the queue families of a physical device
 func GetPhysicalDeviceQueueFamilyProperties(pd PhysicalDevice) []QueueFamilyProperties {
 	vkDevice := C.VkPhysicalDevice(unsafe.Pointer(pd))
 	raw := enumerateVoid(func(count *C.uint32_t, out *C.VkQueueFamilyProperties) {
@@ -152,6 +154,7 @@ type PhysicalDeviceMemoryProperties struct {
 	MemoryHeaps []MemoryHeap
 }
 
+// Queries the memory types and heaps of a physical device
 func GetPhysicalDeviceMemoryProperties2(pd PhysicalDevice) PhysicalDeviceMemoryProperties {
 	var vkMemoryProperties C.VkPhysicalDeviceMemoryProperties2
 	vkMemoryProperties.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2

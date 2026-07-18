@@ -159,6 +159,7 @@ type RenderingInfo struct {
 	DepthAttachment  *RenderingAttachmentInfo
 }
 
+// Fills one C rendering attachment from its Go mirror
 func fillAttachment(dst *C.VkRenderingAttachmentInfo, a *RenderingAttachmentInfo) {
 	dst.sType = C.VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
 	dst.imageView = C.VkImageView(unsafe.Pointer(a.ImageView))

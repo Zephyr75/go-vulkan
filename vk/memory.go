@@ -18,12 +18,14 @@ type MemoryRequirements struct {
 	MemoryTypeBits uint32
 }
 
+// Queries the size, alignment and memory-type bits a buffer's allocation must satisfy
 func GetBufferMemoryRequirements(d Device, b Buffer) MemoryRequirements {
 	var r C.VkMemoryRequirements
 	C.vkGetBufferMemoryRequirements(C.VkDevice(unsafe.Pointer(d)), C.VkBuffer(unsafe.Pointer(b)), &r)
 	return MemoryRequirements{uint64(r.size), uint64(r.alignment), uint32(r.memoryTypeBits)}
 }
 
+// Queries the size, alignment and memory-type bits an image's allocation must satisfy
 func GetImageMemoryRequirements(d Device, img Image) MemoryRequirements {
 	var r C.VkMemoryRequirements
 	C.vkGetImageMemoryRequirements(C.VkDevice(unsafe.Pointer(d)), C.VkImage(unsafe.Pointer(img)), &r)

@@ -43,7 +43,7 @@ func vkBool(b bool) C.VkBool32 {
 	return C.VK_FALSE
 }
 
-// Builds the features pNext chain Features2 -> Vulkan12 -> Vulkan13) in the arena and returns the head
+// Builds the features pNext chain (Features2 -> Vulkan12 -> Vulkan13) in the arena and returns the head
 func (f Features) chain(a *arena) *C.VkPhysicalDeviceFeatures2 {
 	v13 := (*C.VkPhysicalDeviceVulkan13Features)(a.alloc(1, unsafe.Sizeof(C.VkPhysicalDeviceVulkan13Features{})))
 	v13.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES

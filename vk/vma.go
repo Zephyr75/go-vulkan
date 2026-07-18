@@ -74,6 +74,7 @@ func VmaCreateAllocator(ci VmaAllocatorCreateInfo) *VmaAllocator {
 	}
 }
 
+// Does nothing; every allocation owns its own memory, so there is nothing to release
 func VmaDestroyAllocator(*VmaAllocator) {}
 
 // Creates a buffer with dedicated bound memory, persistently mapped when VmaAllocationCreateMapped is set
