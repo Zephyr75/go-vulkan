@@ -34,6 +34,7 @@ func DestroyBuffer(d Device, b Buffer) {
 // ImageCreateInfo is the Go-facing input to CreateImage. Tiling is OPTIMAL,
 // samples 1, initial layout UNDEFINED, exclusive sharing.
 type ImageCreateInfo struct {
+	Flags       ImageCreateFlags // e.g. ImageCreateCubeCompatible
 	ImageType   ImageType
 	Format      Format
 	Extent      Extent3D
@@ -52,6 +53,7 @@ func CreateImage(d Device, ci ImageCreateInfo) (Image, error) {
 	}
 	info := C.VkImageCreateInfo{
 		sType:         C.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		flags:         C.VkImageCreateFlags(ci.Flags),
 		imageType:     C.VkImageType(ci.ImageType),
 		format:        C.VkFormat(ci.Format),
 		mipLevels:     C.uint32_t(ci.MipLevels),
@@ -89,13 +91,20 @@ type SamplerCreateInfo struct {
 	AnisotropyEnable bool
 	MaxAnisotropy    float32
 	MaxLod           float32
+	// Border color for ClampToBorder address modes. The zero value maps to
+	// opaque black (the historical fixed default), not transparent black.
+	BorderColor BorderColor
 }
 
-// Creates a sampler with fixed opaque-black border and zero min LOD
+// Creates a sampler with zero min LOD; BorderColor defaults to opaque black
 func CreateSampler(d Device, ci SamplerCreateInfo) (Sampler, error) {
 	aniso := C.VkBool32(C.VK_FALSE)
 	if ci.AnisotropyEnable {
 		aniso = C.VK_TRUE
+	}
+	border := ci.BorderColor
+	if border == 0 {
+		border = BorderColorOpaqueBlackFloat
 	}
 	info := C.VkSamplerCreateInfo{
 		sType:            C.VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -109,7 +118,7 @@ func CreateSampler(d Device, ci SamplerCreateInfo) (Sampler, error) {
 		maxAnisotropy:    C.float(ci.MaxAnisotropy),
 		minLod:           0,
 		maxLod:           C.float(ci.MaxLod),
-		borderColor:      C.VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
+		borderColor:      C.VkBorderColor(border),
 	}
 	var out C.VkSampler
 	if err := check(C.vkCreateSampler(C.VkDevice(unsafe.Pointer(d)), &info, nil, &out)); err != nil {

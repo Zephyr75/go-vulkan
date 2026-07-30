@@ -271,3 +271,25 @@ func CmdDrawIndexed(cb CommandBuffer, indexCount, instanceCount, firstIndex uint
 		C.uint32_t(indexCount), C.uint32_t(instanceCount), C.uint32_t(firstIndex),
 		C.int32_t(vertexOffset), C.uint32_t(firstInstance))
 }
+
+func CmdDraw(cb CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance uint32) {
+	C.vkCmdDraw(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.uint32_t(vertexCount), C.uint32_t(instanceCount),
+		C.uint32_t(firstVertex), C.uint32_t(firstInstance))
+}
+
+// The three setters below are Vulkan 1.3 dynamic state (promoted from
+// VK_EXT_extended_dynamic_state, no feature bit required). The pipeline must
+// list the matching DynamicState* in PipelineDynamicStateCreateInfo.
+
+func CmdSetCullMode(cb CommandBuffer, mode CullModeFlags) {
+	C.vkCmdSetCullMode(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkCullModeFlags(mode))
+}
+
+func CmdSetFrontFace(cb CommandBuffer, ff FrontFace) {
+	C.vkCmdSetFrontFace(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkFrontFace(ff))
+}
+
+func CmdSetDepthCompareOp(cb CommandBuffer, op CompareOp) {
+	C.vkCmdSetDepthCompareOp(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkCompareOp(op))
+}

@@ -67,8 +67,15 @@ const (
 type ImageViewType int32
 
 const (
-	ImageViewType2D = ImageViewType(C.VK_IMAGE_VIEW_TYPE_2D)
+	ImageViewType2D      = ImageViewType(C.VK_IMAGE_VIEW_TYPE_2D)
+	ImageViewTypeCube    = ImageViewType(C.VK_IMAGE_VIEW_TYPE_CUBE)
+	ImageViewType2DArray = ImageViewType(C.VK_IMAGE_VIEW_TYPE_2D_ARRAY)
 )
+
+type ImageCreateFlags uint32
+
+// Required on images sampled through a cube (or cube-array) view.
+const ImageCreateCubeCompatible = ImageCreateFlags(C.VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
 
 type ColorSpace int32
 
@@ -111,8 +118,18 @@ const (
 type SamplerAddressMode int32
 
 const (
-	SamplerAddressModeRepeat      = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_REPEAT)
-	SamplerAddressModeClampToEdge = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+	SamplerAddressModeRepeat        = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_REPEAT)
+	SamplerAddressModeClampToEdge   = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+	SamplerAddressModeClampToBorder = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER)
+)
+
+// Border color used by ClampToBorder address modes. The zero value keeps the
+// package's historical default (opaque black); see CreateSampler.
+type BorderColor int32
+
+const (
+	BorderColorOpaqueBlackFloat = BorderColor(C.VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK)
+	BorderColorOpaqueWhiteFloat = BorderColor(C.VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE)
 )
 
 type SamplerMipmapMode int32
@@ -179,6 +196,11 @@ type DynamicState int32
 const (
 	DynamicStateViewport = DynamicState(C.VK_DYNAMIC_STATE_VIEWPORT)
 	DynamicStateScissor  = DynamicState(C.VK_DYNAMIC_STATE_SCISSOR)
+	// Core in 1.3 (promoted from VK_EXT_extended_dynamic_state): set at record
+	// time with CmdSetCullMode / CmdSetFrontFace / CmdSetDepthCompareOp.
+	DynamicStateCullMode       = DynamicState(C.VK_DYNAMIC_STATE_CULL_MODE)
+	DynamicStateFrontFace      = DynamicState(C.VK_DYNAMIC_STATE_FRONT_FACE)
+	DynamicStateDepthCompareOp = DynamicState(C.VK_DYNAMIC_STATE_DEPTH_COMPARE_OP)
 )
 
 type BlendFactor int32
@@ -271,6 +293,7 @@ type ShaderStageFlags uint32
 
 const (
 	ShaderStageVertex      = ShaderStageFlags(C.VK_SHADER_STAGE_VERTEX_BIT)
+	ShaderStageGeometry    = ShaderStageFlags(C.VK_SHADER_STAGE_GEOMETRY_BIT)
 	ShaderStageFragment    = ShaderStageFlags(C.VK_SHADER_STAGE_FRAGMENT_BIT)
 	ShaderStageAllGraphics = ShaderStageFlags(C.VK_SHADER_STAGE_ALL_GRAPHICS)
 )

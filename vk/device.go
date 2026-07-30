@@ -12,7 +12,9 @@ import "unsafe"
 type Features struct {
 	// 1.0
 	SamplerAnisotropy bool
+	GeometryShader    bool
 	// 1.2
+	ScalarBlockLayout                            bool
 	BufferDeviceAddress                          bool
 	DescriptorIndexing                           bool
 	RuntimeDescriptorArray                       bool
@@ -60,11 +62,13 @@ func (f Features) chain(a *arena) *C.VkPhysicalDeviceFeatures2 {
 	v12.descriptorBindingVariableDescriptorCount = vkBool(f.DescriptorBindingVariableDescriptorCount)
 	v12.shaderSampledImageArrayNonUniformIndexing = vkBool(f.ShaderSampledImageArrayNonUniformIndexing)
 	v12.descriptorBindingSampledImageUpdateAfterBind = vkBool(f.DescriptorBindingSampledImageUpdateAfterBind)
+	v12.scalarBlockLayout = vkBool(f.ScalarBlockLayout)
 
 	feat2 := (*C.VkPhysicalDeviceFeatures2)(a.alloc(1, unsafe.Sizeof(C.VkPhysicalDeviceFeatures2{})))
 	feat2.sType = C.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
 	feat2.pNext = unsafe.Pointer(v12)
 	feat2.features.samplerAnisotropy = vkBool(f.SamplerAnisotropy)
+	feat2.features.geometryShader = vkBool(f.GeometryShader)
 	return feat2
 }
 
