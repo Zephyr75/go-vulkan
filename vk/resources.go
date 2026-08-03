@@ -32,7 +32,7 @@ func DestroyBuffer(d Device, b Buffer) {
 }
 
 // ImageCreateInfo is the Go-facing input to CreateImage. Tiling is OPTIMAL,
-// samples 1, initial layout UNDEFINED, exclusive sharing.
+// initial layout UNDEFINED, exclusive sharing.
 type ImageCreateInfo struct {
 	Flags       ImageCreateFlags // e.g. ImageCreateCubeCompatible
 	ImageType   ImageType
@@ -41,6 +41,9 @@ type ImageCreateInfo struct {
 	MipLevels   uint32
 	ArrayLayers uint32
 	Usage       ImageUsageFlags
+	// Zero means SampleCount1Bit; anything else needs the image to be used as
+	// an attachment only, never sampled directly
+	Samples SampleCountFlags
 }
 
 // Creates an image with the fixed defaults documented on ImageCreateInfo; Mip/ArrayLayers default to 1
@@ -51,6 +54,9 @@ func CreateImage(d Device, ci ImageCreateInfo) (Image, error) {
 	if ci.ArrayLayers == 0 {
 		ci.ArrayLayers = 1
 	}
+	if ci.Samples == 0 {
+		ci.Samples = SampleCount1Bit
+	}
 	info := C.VkImageCreateInfo{
 		sType:         C.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		flags:         C.VkImageCreateFlags(ci.Flags),
@@ -58,7 +64,7 @@ func CreateImage(d Device, ci ImageCreateInfo) (Image, error) {
 		format:        C.VkFormat(ci.Format),
 		mipLevels:     C.uint32_t(ci.MipLevels),
 		arrayLayers:   C.uint32_t(ci.ArrayLayers),
-		samples:       C.VK_SAMPLE_COUNT_1_BIT,
+		samples:       C.VkSampleCountFlagBits(ci.Samples),
 		tiling:        C.VK_IMAGE_TILING_OPTIMAL,
 		usage:         C.VkImageUsageFlags(ci.Usage),
 		sharingMode:   C.VK_SHARING_MODE_EXCLUSIVE,

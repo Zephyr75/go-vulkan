@@ -234,6 +234,9 @@ const (
 	ImageUsageSampled                = ImageUsageFlags(C.VK_IMAGE_USAGE_SAMPLED_BIT)
 	ImageUsageColorAttachment        = ImageUsageFlags(C.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
 	ImageUsageDepthStencilAttachment = ImageUsageFlags(C.VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+	// An attachment that lives only inside one pass, letting a tiler keep it in
+	// on-chip memory: MSAA colour targets that are resolved, never stored
+	ImageUsageTransientAttachment = ImageUsageFlags(C.VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
 )
 
 type BufferUsageFlags uint32
@@ -278,7 +281,22 @@ const (
 
 type SampleCountFlags uint32
 
-const SampleCount1Bit = SampleCountFlags(C.VK_SAMPLE_COUNT_1_BIT)
+// The spec guarantees framebufferColor/DepthSampleCounts contain 1, 2 and 4, so
+// only counts above that need a limits query before use
+const (
+	SampleCount1Bit = SampleCountFlags(C.VK_SAMPLE_COUNT_1_BIT)
+	SampleCount2Bit = SampleCountFlags(C.VK_SAMPLE_COUNT_2_BIT)
+	SampleCount4Bit = SampleCountFlags(C.VK_SAMPLE_COUNT_4_BIT)
+	SampleCount8Bit = SampleCountFlags(C.VK_SAMPLE_COUNT_8_BIT)
+)
+
+type ResolveModeFlags uint32
+
+const (
+	ResolveModeNone       = ResolveModeFlags(C.VK_RESOLVE_MODE_NONE)
+	ResolveModeAverage    = ResolveModeFlags(C.VK_RESOLVE_MODE_AVERAGE_BIT)
+	ResolveModeSampleZero = ResolveModeFlags(C.VK_RESOLVE_MODE_SAMPLE_ZERO_BIT)
+)
 
 type ColorComponentFlags uint32
 

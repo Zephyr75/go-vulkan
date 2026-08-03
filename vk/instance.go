@@ -98,6 +98,11 @@ type PhysicalDeviceProperties struct {
 	MinUniformBufferOffsetAlignment uint64
 	MinStorageBufferOffsetAlignment uint64
 	MaxSamplerAnisotropy            float32
+
+	// Sample counts usable for MSAA attachments. Both are guaranteed to contain
+	// 1 and 4, so only a higher count needs testing against them
+	FramebufferColorSampleCounts SampleCountFlags
+	FramebufferDepthSampleCounts SampleCountFlags
 }
 
 // Queries a GPU's identity (name, IDs, type) and the limits the demo needs
@@ -116,6 +121,8 @@ func GetPhysicalDeviceProperties2(pd PhysicalDevice) PhysicalDeviceProperties {
 		MinUniformBufferOffsetAlignment: uint64(properties.limits.minUniformBufferOffsetAlignment),
 		MinStorageBufferOffsetAlignment: uint64(properties.limits.minStorageBufferOffsetAlignment),
 		MaxSamplerAnisotropy:            float32(properties.limits.maxSamplerAnisotropy),
+		FramebufferColorSampleCounts:    SampleCountFlags(properties.limits.framebufferColorSampleCounts),
+		FramebufferDepthSampleCounts:    SampleCountFlags(properties.limits.framebufferDepthSampleCounts),
 	}
 }
 

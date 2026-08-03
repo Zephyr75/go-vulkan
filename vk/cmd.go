@@ -148,6 +148,12 @@ type RenderingAttachmentInfo struct {
 	LoadOp      AttachmentLoadOp
 	StoreOp     AttachmentStoreOp
 	ClearValue  ClearValue
+	// Set together to resolve a multisampled ImageView into a single-sample
+	// image at the end of the pass, which is how MSAA reaches the swapchain
+	// under dynamic rendering. ResolveMode None (the zero value) means no resolve
+	ResolveMode        ResolveModeFlags
+	ResolveImageView   ImageView
+	ResolveImageLayout ImageLayout
 }
 
 // RenderingInfo is the Go-facing input to CmdBeginRendering. DepthAttachment is
@@ -167,6 +173,9 @@ func fillAttachment(dst *C.VkRenderingAttachmentInfo, a *RenderingAttachmentInfo
 	dst.loadOp = C.VkAttachmentLoadOp(a.LoadOp)
 	dst.storeOp = C.VkAttachmentStoreOp(a.StoreOp)
 	dst.clearValue = a.ClearValue.c()
+	dst.resolveMode = C.VkResolveModeFlagBits(a.ResolveMode)
+	dst.resolveImageView = C.VkImageView(unsafe.Pointer(a.ResolveImageView))
+	dst.resolveImageLayout = C.VkImageLayout(a.ResolveImageLayout)
 }
 
 // Begins dynamic rendering with the given attachments (no render pass); LayerCount defaults to 1
