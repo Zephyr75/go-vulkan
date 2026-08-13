@@ -26,9 +26,9 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 
-	"go-vulkan/demo/obj"
-	"go-vulkan/demo/texture"
-	"go-vulkan/demo/shaders"
+	"go-vulkan/how_to_vulkan/utils/obj"
+	"go-vulkan/how_to_vulkan/utils/texture"
+	"go-vulkan/how_to_vulkan/utils/shaders"
 	"go-vulkan/vk"
 )
 
