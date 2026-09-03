@@ -138,6 +138,109 @@ func CmdCopyBufferToImage(cb CommandBuffer, src Buffer, dst Image, layout ImageL
 		C.VkImageLayout(layout), C.uint32_t(len(regions)), arr)
 }
 
+// ---- image -> image copy -------------------------------------------------
+
+// ImageCopy is a single image-to-image copy region. Vulkan requires the two
+// subresources to agree on layer count, so there is one LayerCount rather than
+// two, and copying between different aspects is not a thing either. Offsets are
+// 2D with an implied z of 0, as CmdCopyBufferToImage does, no 3D image being
+// bound yet.
+type ImageCopy struct {
+	AspectMask        ImageAspectFlags
+	SrcMipLevel       uint32
+	SrcBaseArrayLayer uint32
+	SrcOffset         Offset2D
+	DstMipLevel       uint32
+	DstBaseArrayLayer uint32
+	DstOffset         Offset2D
+	// Defaults to 1
+	LayerCount uint32
+	Extent     Extent3D
+}
+
+// Copies regions between two images, src in TRANSFER_SRC and dst in TRANSFER_DST layout
+//
+// The images must have compatible formats, and neither may be an attachment of
+// a render pass in progress: a copy is not allowed inside CmdBeginRendering.
+func CmdCopyImage(cb CommandBuffer, src Image, srcLayout ImageLayout, dst Image, dstLayout ImageLayout, regions []ImageCopy) {
+	if len(regions) == 0 {
+		return
+	}
+	arr := (*C.VkImageCopy)(C.calloc(C.size_t(len(regions)), C.size_t(unsafe.Sizeof(C.VkImageCopy{}))))
+	defer C.free(unsafe.Pointer(arr))
+	s := unsafe.Slice(arr, len(regions))
+	for i, r := range regions {
+		lc := r.LayerCount
+		if lc == 0 {
+			lc = 1
+		}
+		s[i].srcSubresource = C.VkImageSubresourceLayers{
+			aspectMask:     C.VkImageAspectFlags(r.AspectMask),
+			mipLevel:       C.uint32_t(r.SrcMipLevel),
+			baseArrayLayer: C.uint32_t(r.SrcBaseArrayLayer),
+			layerCount:     C.uint32_t(lc),
+		}
+		s[i].dstSubresource = C.VkImageSubresourceLayers{
+			aspectMask:     C.VkImageAspectFlags(r.AspectMask),
+			mipLevel:       C.uint32_t(r.DstMipLevel),
+			baseArrayLayer: C.uint32_t(r.DstBaseArrayLayer),
+			layerCount:     C.uint32_t(lc),
+		}
+		s[i].srcOffset = C.VkOffset3D{x: C.int32_t(r.SrcOffset.X), y: C.int32_t(r.SrcOffset.Y), z: 0}
+		s[i].dstOffset = C.VkOffset3D{x: C.int32_t(r.DstOffset.X), y: C.int32_t(r.DstOffset.Y), z: 0}
+		s[i].extent = C.VkExtent3D{
+			width:  C.uint32_t(r.Extent.Width),
+			height: C.uint32_t(r.Extent.Height),
+			depth:  C.uint32_t(r.Extent.Depth),
+		}
+	}
+	C.vkCmdCopyImage(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkImage(unsafe.Pointer(src)), C.VkImageLayout(srcLayout),
+		C.VkImage(unsafe.Pointer(dst)), C.VkImageLayout(dstLayout),
+		C.uint32_t(len(regions)), arr)
+}
+
+// ---- image -> buffer copy ------------------------------------------------
+
+// Copies image regions into a buffer, the image being in TRANSFER_SRC layout; LayerCount defaults to 1
+//
+// The mirror of CmdCopyBufferToImage and it shares BufferImageCopy, the region
+// struct being the same one Vulkan uses in both directions. This is the only
+// way to get a rendered image back to the CPU: an image has no host-visible
+// form of its own, so a readback is always a copy into a mapped buffer.
+func CmdCopyImageToBuffer(cb CommandBuffer, src Image, layout ImageLayout, dst Buffer, regions []BufferImageCopy) {
+	if len(regions) == 0 {
+		return
+	}
+	arr := (*C.VkBufferImageCopy)(C.calloc(C.size_t(len(regions)), C.size_t(unsafe.Sizeof(C.VkBufferImageCopy{}))))
+	defer C.free(unsafe.Pointer(arr))
+	s := unsafe.Slice(arr, len(regions))
+	for i, r := range regions {
+		lc := r.LayerCount
+		if lc == 0 {
+			lc = 1
+		}
+		s[i].bufferOffset = C.VkDeviceSize(r.BufferOffset)
+		s[i].bufferRowLength = C.uint32_t(r.BufferRowLength)
+		s[i].bufferImageHeight = C.uint32_t(r.BufferImageHeight)
+		s[i].imageSubresource = C.VkImageSubresourceLayers{
+			aspectMask:     C.VkImageAspectFlags(r.AspectMask),
+			mipLevel:       C.uint32_t(r.MipLevel),
+			baseArrayLayer: C.uint32_t(r.BaseArrayLayer),
+			layerCount:     C.uint32_t(lc),
+		}
+		s[i].imageOffset = C.VkOffset3D{x: C.int32_t(r.ImageOffset.X), y: C.int32_t(r.ImageOffset.Y), z: 0}
+		s[i].imageExtent = C.VkExtent3D{
+			width:  C.uint32_t(r.ImageExtent.Width),
+			height: C.uint32_t(r.ImageExtent.Height),
+			depth:  C.uint32_t(r.ImageExtent.Depth),
+		}
+	}
+	C.vkCmdCopyImageToBuffer(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkImage(unsafe.Pointer(src)), C.VkImageLayout(layout),
+		C.VkBuffer(unsafe.Pointer(dst)), C.uint32_t(len(regions)), arr)
+}
+
 // ---- dynamic rendering ---------------------------------------------------
 
 // RenderingAttachmentInfo describes one color or depth attachment for

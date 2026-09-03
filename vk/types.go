@@ -159,6 +159,7 @@ type CompareOp int32
 const (
 	CompareOpLess        = CompareOp(C.VK_COMPARE_OP_LESS)
 	CompareOpLessOrEqual = CompareOp(C.VK_COMPARE_OP_LESS_OR_EQUAL)
+	CompareOpEqual       = CompareOp(C.VK_COMPARE_OP_EQUAL)
 	CompareOpAlways      = CompareOp(C.VK_COMPARE_OP_ALWAYS)
 )
 

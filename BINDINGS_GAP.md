@@ -84,7 +84,7 @@ Two intentional modernisations, both worth keeping:
 
 ## 3. Existing — not in the reference
 
-18 functions the binding adds. Every one has a reason; none is speculative.
+20 functions the binding adds. Every one has a reason; none is speculative.
 
 | function | Ref | why it exists |
 |---|---|---|
@@ -92,6 +92,8 @@ Two intentional modernisations, both worth keeping:
 | `GetPhysicalDeviceSurfaceFormatsKHR` `GetPhysicalDeviceSurfacePresentModesKHR` `GetPhysicalDeviceSurfaceSupportKHR` | ✗ | The reference assumes a format and a present mode. Querying is correct, cheap and already written |
 | `CmdSetCullMode` `CmdSetDepthCompareOp` | ✗ | Dynamic state, backing Overdrive's `SetCullMode` / `SetDepthCompare`. **These become optional** if the engine moves to baked pipeline objects — but keep them; per-draw cull flips are still the cheap way to render a two-sided material. `CmdSetFrontFace` was bound alongside them and removed on 2026-08-05: front face is a pass's winding convention, so it belongs in the pipeline, and nothing ever set it dynamically |
 | `CmdDraw` | ✗ | Non-indexed draw. The reference only draws indexed; the engine's fullscreen quads and skybox are non-indexed |
+| `CmdCopyImage` | ✗ | Added 2026-08-13 for Overdrive's shadow atlas: a depth tile is copied from the static atlas into the dynamic one, and only the movable casters are redrawn on top. Sits beside `CmdBlitImage` (§5.2), which is still missing — a copy needs no format conversion or filtering, so it is the smaller of the two |
+| `CmdCopyImageToBuffer` | ✗ | Added 2026-08-16, the mirror of `CmdCopyBufferToImage` and sharing its `BufferImageCopy`. An image has no host-visible form, so a readback is always a copy into a mapped buffer; Overdrive dumps its shadow atlas to a PNG through this, the only way to eyeball a depth target on a session with no screenshot path |
 | `QueueWaitIdle` | ✗ | One-time-submit teardown without a fence |
 | `MemCopy` `ClearColor` `ClearDepthStencil` | ✗ | Go-side helpers, no C counterpart |
 
