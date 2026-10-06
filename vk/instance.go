@@ -103,6 +103,8 @@ type PhysicalDeviceProperties struct {
 	// 1 and 4, so only a higher count needs testing against them
 	FramebufferColorSampleCounts SampleCountFlags
 	FramebufferDepthSampleCounts SampleCountFlags
+
+	MaxComputeWorkGroupInvocations uint32
 }
 
 // Queries a GPU's identity (name, IDs, type) and the limits the demo needs
@@ -123,6 +125,7 @@ func GetPhysicalDeviceProperties2(pd PhysicalDevice) PhysicalDeviceProperties {
 		MaxSamplerAnisotropy:            float32(properties.limits.maxSamplerAnisotropy),
 		FramebufferColorSampleCounts:    SampleCountFlags(properties.limits.framebufferColorSampleCounts),
 		FramebufferDepthSampleCounts:    SampleCountFlags(properties.limits.framebufferDepthSampleCounts),
+		MaxComputeWorkGroupInvocations:  uint32(properties.limits.maxComputeWorkGroupInvocations),
 	}
 }
 
@@ -183,4 +186,27 @@ func GetPhysicalDeviceMemoryProperties2(pd PhysicalDevice) PhysicalDeviceMemoryP
 		}
 	}
 	return PhysicalDeviceMemoryProperties{MemoryTypes: types, MemoryHeaps: heaps}
+}
+
+// Lists the instance extensions the loader and its layers provide
+//
+// VK_EXT_debug_utils is optional, so the backend asks before enabling it rather
+// than failing instance creation where the loader does not have it
+func EnumerateInstanceExtensionProperties() ([]string, error) {
+	var count C.uint32_t
+	if err := check(C.vkEnumerateInstanceExtensionProperties(nil, &count, nil)); err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, nil
+	}
+	buf := make([]C.VkExtensionProperties, count)
+	if err := check(C.vkEnumerateInstanceExtensionProperties(nil, &count, &buf[0])); err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, count)
+	for i := range buf[:count] {
+		out = append(out, C.GoString(&buf[i].extensionName[0]))
+	}
+	return out, nil
 }

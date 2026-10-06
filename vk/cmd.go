@@ -53,39 +53,108 @@ type ImageMemoryBarrier2 struct {
 	SubresourceRange    ImageSubresourceRange
 }
 
-// Records image layout-transition barriers through one VkDependencyInfo
-func CmdPipelineBarrier2(cb CommandBuffer, barriers []ImageMemoryBarrier2) {
-	if len(barriers) == 0 {
+// BufferMemoryBarrier2 is a synchronization2 buffer barrier. A buffer has no
+// layout, so this carries stage and access masks alone — the barrier kind a
+// compute pass writing a storage buffer needs against the draw that reads it.
+type BufferMemoryBarrier2 struct {
+	SrcStageMask        PipelineStageFlags2
+	SrcAccessMask       AccessFlags2
+	DstStageMask        PipelineStageFlags2
+	DstAccessMask       AccessFlags2
+	SrcQueueFamilyIndex uint32
+	DstQueueFamilyIndex uint32
+	Buffer              Buffer
+	Offset              uint64
+	Size                uint64 // zero means WholeSize
+}
+
+// MemoryBarrier2 is the global form: stage and access masks over every resource
+type MemoryBarrier2 struct {
+	SrcStageMask  PipelineStageFlags2
+	SrcAccessMask AccessFlags2
+	DstStageMask  PipelineStageFlags2
+	DstAccessMask AccessFlags2
+}
+
+// DependencyInfo is the whole of one barrier command: any mix of global, buffer
+// and image barriers, recorded as a single dependency
+type DependencyInfo struct {
+	Memory []MemoryBarrier2
+	Buffer []BufferMemoryBarrier2
+	Image  []ImageMemoryBarrier2
+}
+
+// Records one dependency carrying any mix of global, buffer and image barriers
+func CmdPipelineBarrier2(cb CommandBuffer, dep DependencyInfo) {
+	if len(dep.Memory) == 0 && len(dep.Buffer) == 0 && len(dep.Image) == 0 {
 		return
 	}
-	arr := (*C.VkImageMemoryBarrier2)(C.calloc(C.size_t(len(barriers)), C.size_t(unsafe.Sizeof(C.VkImageMemoryBarrier2{}))))
-	defer C.free(unsafe.Pointer(arr))
-	s := unsafe.Slice(arr, len(barriers))
-	for i, b := range barriers {
-		s[i].sType = C.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
-		s[i].srcStageMask = C.VkPipelineStageFlags2(b.SrcStageMask)
-		s[i].srcAccessMask = C.VkAccessFlags2(b.SrcAccessMask)
-		s[i].dstStageMask = C.VkPipelineStageFlags2(b.DstStageMask)
-		s[i].dstAccessMask = C.VkAccessFlags2(b.DstAccessMask)
-		s[i].oldLayout = C.VkImageLayout(b.OldLayout)
-		s[i].newLayout = C.VkImageLayout(b.NewLayout)
-		s[i].srcQueueFamilyIndex = C.uint32_t(b.SrcQueueFamilyIndex)
-		s[i].dstQueueFamilyIndex = C.uint32_t(b.DstQueueFamilyIndex)
-		s[i].image = C.VkImage(unsafe.Pointer(b.Image))
-		s[i].subresourceRange = C.VkImageSubresourceRange{
-			aspectMask:     C.VkImageAspectFlags(b.SubresourceRange.AspectMask),
-			baseMipLevel:   C.uint32_t(b.SubresourceRange.BaseMipLevel),
-			levelCount:     C.uint32_t(b.SubresourceRange.LevelCount),
-			baseArrayLayer: C.uint32_t(b.SubresourceRange.BaseArrayLayer),
-			layerCount:     C.uint32_t(b.SubresourceRange.LayerCount),
+	var a arena
+	defer a.free()
+
+	info := C.VkDependencyInfo{sType: C.VK_STRUCTURE_TYPE_DEPENDENCY_INFO}
+
+	if n := len(dep.Memory); n > 0 {
+		p := (*C.VkMemoryBarrier2)(a.alloc(n, unsafe.Sizeof(C.VkMemoryBarrier2{})))
+		s := unsafe.Slice(p, n)
+		for i, b := range dep.Memory {
+			s[i].sType = C.VK_STRUCTURE_TYPE_MEMORY_BARRIER_2
+			s[i].srcStageMask = C.VkPipelineStageFlags2(b.SrcStageMask)
+			s[i].srcAccessMask = C.VkAccessFlags2(b.SrcAccessMask)
+			s[i].dstStageMask = C.VkPipelineStageFlags2(b.DstStageMask)
+			s[i].dstAccessMask = C.VkAccessFlags2(b.DstAccessMask)
 		}
+		info.pMemoryBarriers, info.memoryBarrierCount = p, C.uint32_t(n)
 	}
-	dep := C.VkDependencyInfo{
-		sType:                   C.VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-		imageMemoryBarrierCount: C.uint32_t(len(barriers)),
-		pImageMemoryBarriers:    arr,
+
+	if n := len(dep.Buffer); n > 0 {
+		p := (*C.VkBufferMemoryBarrier2)(a.alloc(n, unsafe.Sizeof(C.VkBufferMemoryBarrier2{})))
+		s := unsafe.Slice(p, n)
+		for i, b := range dep.Buffer {
+			size := b.Size
+			if size == 0 {
+				size = WholeSize
+			}
+			s[i].sType = C.VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2
+			s[i].srcStageMask = C.VkPipelineStageFlags2(b.SrcStageMask)
+			s[i].srcAccessMask = C.VkAccessFlags2(b.SrcAccessMask)
+			s[i].dstStageMask = C.VkPipelineStageFlags2(b.DstStageMask)
+			s[i].dstAccessMask = C.VkAccessFlags2(b.DstAccessMask)
+			s[i].srcQueueFamilyIndex = C.uint32_t(b.SrcQueueFamilyIndex)
+			s[i].dstQueueFamilyIndex = C.uint32_t(b.DstQueueFamilyIndex)
+			s[i].buffer = C.VkBuffer(unsafe.Pointer(b.Buffer))
+			s[i].offset = C.VkDeviceSize(b.Offset)
+			s[i].size = C.VkDeviceSize(size)
+		}
+		info.pBufferMemoryBarriers, info.bufferMemoryBarrierCount = p, C.uint32_t(n)
 	}
-	C.vkCmdPipelineBarrier2(C.VkCommandBuffer(unsafe.Pointer(cb)), &dep)
+
+	if n := len(dep.Image); n > 0 {
+		p := (*C.VkImageMemoryBarrier2)(a.alloc(n, unsafe.Sizeof(C.VkImageMemoryBarrier2{})))
+		s := unsafe.Slice(p, n)
+		for i, b := range dep.Image {
+			s[i].sType = C.VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
+			s[i].srcStageMask = C.VkPipelineStageFlags2(b.SrcStageMask)
+			s[i].srcAccessMask = C.VkAccessFlags2(b.SrcAccessMask)
+			s[i].dstStageMask = C.VkPipelineStageFlags2(b.DstStageMask)
+			s[i].dstAccessMask = C.VkAccessFlags2(b.DstAccessMask)
+			s[i].oldLayout = C.VkImageLayout(b.OldLayout)
+			s[i].newLayout = C.VkImageLayout(b.NewLayout)
+			s[i].srcQueueFamilyIndex = C.uint32_t(b.SrcQueueFamilyIndex)
+			s[i].dstQueueFamilyIndex = C.uint32_t(b.DstQueueFamilyIndex)
+			s[i].image = C.VkImage(unsafe.Pointer(b.Image))
+			s[i].subresourceRange = C.VkImageSubresourceRange{
+				aspectMask:     C.VkImageAspectFlags(b.SubresourceRange.AspectMask),
+				baseMipLevel:   C.uint32_t(b.SubresourceRange.BaseMipLevel),
+				levelCount:     C.uint32_t(b.SubresourceRange.LevelCount),
+				baseArrayLayer: C.uint32_t(b.SubresourceRange.BaseArrayLayer),
+				layerCount:     C.uint32_t(b.SubresourceRange.LayerCount),
+			}
+		}
+		info.pImageMemoryBarriers, info.imageMemoryBarrierCount = p, C.uint32_t(n)
+	}
+
+	C.vkCmdPipelineBarrier2(C.VkCommandBuffer(unsafe.Pointer(cb)), &info)
 }
 
 // ---- buffer -> image copy ------------------------------------------------
@@ -390,18 +459,75 @@ func CmdDraw(cb CommandBuffer, vertexCount, instanceCount, firstVertex, firstIns
 		C.uint32_t(firstVertex), C.uint32_t(firstInstance))
 }
 
-// The three setters below are Vulkan 1.3 dynamic state (promoted from
-// VK_EXT_extended_dynamic_state, no feature bit required). The pipeline must
-// list the matching DynamicState* in PipelineDynamicStateCreateInfo.
+// ---- compute -------------------------------------------------------------
 
-func CmdSetCullMode(cb CommandBuffer, mode CullModeFlags) {
-	C.vkCmdSetCullMode(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkCullModeFlags(mode))
+// Dispatches a compute grid, in workgroups rather than threads
+func CmdDispatch(cb CommandBuffer, x, y, z uint32) {
+	C.vkCmdDispatch(C.VkCommandBuffer(unsafe.Pointer(cb)), C.uint32_t(x), C.uint32_t(y), C.uint32_t(z))
 }
 
-func CmdSetFrontFace(cb CommandBuffer, ff FrontFace) {
-	C.vkCmdSetFrontFace(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkFrontFace(ff))
+// Dispatches a grid whose three workgroup counts an earlier pass wrote into a buffer
+func CmdDispatchIndirect(cb CommandBuffer, buf Buffer, offset uint64) {
+	C.vkCmdDispatchIndirect(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkBuffer(unsafe.Pointer(buf)), C.VkDeviceSize(offset))
 }
 
-func CmdSetDepthCompareOp(cb CommandBuffer, op CompareOp) {
-	C.vkCmdSetDepthCompareOp(C.VkCommandBuffer(unsafe.Pointer(cb)), C.VkCompareOp(op))
+// ---- indirect draws ------------------------------------------------------
+
+// Draws count indexed commands read from a buffer, count itself being CPU-side
+func CmdDrawIndexedIndirect(cb CommandBuffer, buf Buffer, offset uint64, count, stride uint32) {
+	C.vkCmdDrawIndexedIndirect(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkBuffer(unsafe.Pointer(buf)), C.VkDeviceSize(offset),
+		C.uint32_t(count), C.uint32_t(stride))
+}
+
+// Draws count non-indexed commands read from a buffer
+func CmdDrawIndirect(cb CommandBuffer, buf Buffer, offset uint64, count, stride uint32) {
+	C.vkCmdDrawIndirect(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkBuffer(unsafe.Pointer(buf)), C.VkDeviceSize(offset),
+		C.uint32_t(count), C.uint32_t(stride))
+}
+
+// ---- buffer copies -------------------------------------------------------
+
+// BufferCopy is one region of a buffer-to-buffer copy
+type BufferCopy struct {
+	SrcOffset, DstOffset, Size uint64
+}
+
+// Copies regions between two buffers
+func CmdCopyBuffer(cb CommandBuffer, src, dst Buffer, regions []BufferCopy) {
+	if len(regions) == 0 {
+		return
+	}
+	arr := (*C.VkBufferCopy)(C.calloc(C.size_t(len(regions)), C.size_t(unsafe.Sizeof(C.VkBufferCopy{}))))
+	defer C.free(unsafe.Pointer(arr))
+	s := unsafe.Slice(arr, len(regions))
+	for i, r := range regions {
+		s[i].srcOffset = C.VkDeviceSize(r.SrcOffset)
+		s[i].dstOffset = C.VkDeviceSize(r.DstOffset)
+		s[i].size = C.VkDeviceSize(r.Size)
+	}
+	C.vkCmdCopyBuffer(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkBuffer(unsafe.Pointer(src)), C.VkBuffer(unsafe.Pointer(dst)),
+		C.uint32_t(len(regions)), arr)
+}
+
+// ---- clears --------------------------------------------------------------
+
+// Clears a colour image outside a render pass, which is how a storage image is
+// zeroed before the compute pass that accumulates into it
+func CmdClearColorImage(cb CommandBuffer, img Image, layout ImageLayout, color [4]float32, r ImageSubresourceRange) {
+	var cv C.VkClearColorValue
+	f := (*[4]float32)(unsafe.Pointer(&cv))
+	*f = color
+	rng := C.VkImageSubresourceRange{
+		aspectMask:     C.VkImageAspectFlags(r.AspectMask),
+		baseMipLevel:   C.uint32_t(r.BaseMipLevel),
+		levelCount:     C.uint32_t(r.LevelCount),
+		baseArrayLayer: C.uint32_t(r.BaseArrayLayer),
+		layerCount:     C.uint32_t(r.LayerCount),
+	}
+	C.vkCmdClearColorImage(C.VkCommandBuffer(unsafe.Pointer(cb)),
+		C.VkImage(unsafe.Pointer(img)), C.VkImageLayout(layout), &cv, 1, &rng)
 }

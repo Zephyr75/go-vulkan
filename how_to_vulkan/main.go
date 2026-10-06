@@ -27,8 +27,8 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 
 	"go-vulkan/how_to_vulkan/utils/obj"
-	"go-vulkan/how_to_vulkan/utils/texture"
 	"go-vulkan/how_to_vulkan/utils/shaders"
+	"go-vulkan/how_to_vulkan/utils/texture"
 	"go-vulkan/vk"
 )
 
@@ -393,25 +393,25 @@ func main() {
 		cb := oneTime[0]
 		chk(vk.BeginCommandBuffer(cb, vk.CommandBufferUsageOneTimeSubmit))
 		full := vk.ImageSubresourceRange{AspectMask: vk.ImageAspectColor, LevelCount: 1, LayerCount: 1}
-		vk.CmdPipelineBarrier2(cb, []vk.ImageMemoryBarrier2{{
+		vk.CmdPipelineBarrier2(cb, vk.DependencyInfo{Image: []vk.ImageMemoryBarrier2{{
 			SrcStageMask: vk.PipelineStage2None, SrcAccessMask: vk.Access2None,
 			DstStageMask: vk.PipelineStage2Transfer, DstAccessMask: vk.Access2TransferWrite,
 			OldLayout: vk.ImageLayoutUndefined, NewLayout: vk.ImageLayoutTransferDstOptimal,
 			SrcQueueFamilyIndex: vk.QueueFamilyIgnored, DstQueueFamilyIndex: vk.QueueFamilyIgnored,
 			Image: textures[i].image, SubresourceRange: full,
-		}})
+		}}})
 		vk.CmdCopyBufferToImage(cb, imgSrcBuffer, textures[i].image, vk.ImageLayoutTransferDstOptimal,
 			[]vk.BufferImageCopy{{
 				AspectMask: vk.ImageAspectColor, LayerCount: 1,
 				ImageExtent: vk.Extent3D{Width: uint32(src.Width), Height: uint32(src.Height), Depth: 1},
 			}})
-		vk.CmdPipelineBarrier2(cb, []vk.ImageMemoryBarrier2{{
+		vk.CmdPipelineBarrier2(cb, vk.DependencyInfo{Image: []vk.ImageMemoryBarrier2{{
 			SrcStageMask: vk.PipelineStage2Transfer, SrcAccessMask: vk.Access2TransferWrite,
 			DstStageMask: vk.PipelineStage2FragmentShader, DstAccessMask: vk.Access2ShaderRead,
 			OldLayout: vk.ImageLayoutTransferDstOptimal, NewLayout: vk.ImageLayoutShaderReadOnlyOptimal,
 			SrcQueueFamilyIndex: vk.QueueFamilyIgnored, DstQueueFamilyIndex: vk.QueueFamilyIgnored,
 			Image: textures[i].image, SubresourceRange: full,
-		}})
+		}}})
 		chk(vk.EndCommandBuffer(cb))
 		// Reference uses vkQueueSubmit (v1); this binding is synchronization2, so
 		// the equivalent one-batch submit goes through vkQueueSubmit2.
@@ -571,7 +571,7 @@ func main() {
 		colorRange := vk.ImageSubresourceRange{AspectMask: vk.ImageAspectColor, LevelCount: 1, LayerCount: 1}
 		// Transition color image UNDEFINED->ATTACHMENT and depth image into its
 		// attachment layout before rendering begins.
-		vk.CmdPipelineBarrier2(cb, []vk.ImageMemoryBarrier2{
+		vk.CmdPipelineBarrier2(cb, vk.DependencyInfo{Image: []vk.ImageMemoryBarrier2{
 			{
 				SrcStageMask: vk.PipelineStage2ColorAttachmentOutput, SrcAccessMask: vk.Access2None,
 				DstStageMask: vk.PipelineStage2ColorAttachmentOutput, DstAccessMask: vk.Access2ColorAttachmentWrite,
@@ -587,7 +587,7 @@ func main() {
 				// The chosen depth format carries stencil, so the barrier covers both aspects.
 				Image: depthImage, SubresourceRange: vk.ImageSubresourceRange{AspectMask: vk.ImageAspectDepth | vk.ImageAspectStencil, LevelCount: 1, LayerCount: 1},
 			},
-		})
+		}})
 
 		extent := vk.Extent2D{Width: uint32(windowSize[0]), Height: uint32(windowSize[1])}
 		vk.CmdBeginRendering(cb, vk.RenderingInfo{
@@ -621,13 +621,13 @@ func main() {
 		vk.CmdEndRendering(cb)
 
 		// Transition the swapchain image to PRESENT layout for the presentation engine.
-		vk.CmdPipelineBarrier2(cb, []vk.ImageMemoryBarrier2{{
+		vk.CmdPipelineBarrier2(cb, vk.DependencyInfo{Image: []vk.ImageMemoryBarrier2{{
 			SrcStageMask: vk.PipelineStage2ColorAttachmentOutput, SrcAccessMask: vk.Access2ColorAttachmentWrite,
 			DstStageMask: vk.PipelineStage2ColorAttachmentOutput, DstAccessMask: vk.Access2None,
 			OldLayout: vk.ImageLayoutColorAttachmentOptimal, NewLayout: vk.ImageLayoutPresentSrcKHR,
 			SrcQueueFamilyIndex: vk.QueueFamilyIgnored, DstQueueFamilyIndex: vk.QueueFamilyIgnored,
 			Image: swapchainImages[imageIndex], SubresourceRange: colorRange,
-		}})
+		}}})
 		chk(vk.EndCommandBuffer(cb))
 
 		// Submit to graphics queue, then present.

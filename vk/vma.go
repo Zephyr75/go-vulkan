@@ -41,7 +41,13 @@ const (
 	VmaAllocationCreateHostAccessSequentialWrite VmaAllocationCreateFlags = 1 << 2
 	// Accepted for parity; this allocator never falls back to a staging transfer
 	VmaAllocationCreateHostAccessAllowTransferInstead VmaAllocationCreateFlags = 1 << 3
+	// Selects CPU-readable memory: the readback path maps a buffer and reads it,
+	// which write-combined memory would make unusably slow
+	VmaAllocationCreateHostAccessRandom VmaAllocationCreateFlags = 1 << 4
 )
+
+// The flags that mean "this allocation is reached from the CPU"
+const vmaHostAccess = VmaAllocationCreateHostAccessSequentialWrite | VmaAllocationCreateHostAccessRandom
 
 // Only Auto is supported
 type VmaMemoryUsage uint32
@@ -157,7 +163,16 @@ func (a *VmaAllocator) VmaDestroyImage(img Image, al VmaAllocation) {
 
 // Picks a memory type from the requirement mask: host-writable requests prefer ReBAR-style DEVICE_LOCAL|HOST_VISIBLE|HOST_COHERENT then plain host-visible, others take DEVICE_LOCAL
 func (a *VmaAllocator) memoryType(bits uint32, flags VmaAllocationCreateFlags) (uint32, error) {
-	if flags&VmaAllocationCreateHostAccessSequentialWrite != 0 {
+	if flags&VmaAllocationCreateHostAccessRandom != 0 {
+		// Cached first: a readback reads every byte, and uncached host memory
+		// reads at a fraction of the rate
+		if idx, err := FindMemoryType(a.memProps, bits,
+			MemoryPropertyHostVisible|MemoryPropertyHostCoherent|MemoryPropertyHostCached); err == nil {
+			return idx, nil
+		}
+		return FindMemoryType(a.memProps, bits, MemoryPropertyHostVisible|MemoryPropertyHostCoherent)
+	}
+	if flags&vmaHostAccess != 0 {
 		if idx, err := FindMemoryType(a.memProps, bits,
 			MemoryPropertyDeviceLocal|MemoryPropertyHostVisible|MemoryPropertyHostCoherent); err == nil {
 			return idx, nil

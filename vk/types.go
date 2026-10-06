@@ -197,11 +197,6 @@ type DynamicState int32
 const (
 	DynamicStateViewport = DynamicState(C.VK_DYNAMIC_STATE_VIEWPORT)
 	DynamicStateScissor  = DynamicState(C.VK_DYNAMIC_STATE_SCISSOR)
-	// Core in 1.3 (promoted from VK_EXT_extended_dynamic_state): set at record
-	// time with CmdSetCullMode / CmdSetFrontFace / CmdSetDepthCompareOp.
-	DynamicStateCullMode       = DynamicState(C.VK_DYNAMIC_STATE_CULL_MODE)
-	DynamicStateFrontFace      = DynamicState(C.VK_DYNAMIC_STATE_FRONT_FACE)
-	DynamicStateDepthCompareOp = DynamicState(C.VK_DYNAMIC_STATE_DEPTH_COMPARE_OP)
 )
 
 type BlendFactor int32
@@ -258,6 +253,7 @@ const (
 	MemoryPropertyDeviceLocal  = MemoryPropertyFlags(C.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 	MemoryPropertyHostVisible  = MemoryPropertyFlags(C.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 	MemoryPropertyHostCoherent = MemoryPropertyFlags(C.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+	MemoryPropertyHostCached   = MemoryPropertyFlags(C.VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
 )
 
 type ImageAspectFlags uint32
@@ -408,3 +404,119 @@ const ApiVersion13 = uint32(C.VK_API_VERSION_1_3)
 
 // QueueFamilyIgnored for barrier ownership fields
 const QueueFamilyIgnored = uint32(C.VK_QUEUE_FAMILY_IGNORED)
+
+// ---- additions for compute, storage images, HDR, timing and labels -------
+//
+// Every constant below was added for Overdrive (BINDINGS_OVERDRIVE.md §2). They
+// are grouped by the batch that added them rather than merged into the sections
+// above, so what a batch added stays readable.
+
+// Batch 1: formats. HDR colour, single- and two-channel float targets, and the
+// block-compressed families a loader hands over already compressed
+const (
+	FormatR8Unorm               = Format(C.VK_FORMAT_R8_UNORM)
+	FormatR16Sfloat             = Format(C.VK_FORMAT_R16_SFLOAT)
+	FormatR16G16Sfloat          = Format(C.VK_FORMAT_R16G16_SFLOAT)
+	FormatR16G16B16A16Sfloat    = Format(C.VK_FORMAT_R16G16B16A16_SFLOAT)
+	FormatR11G11B10UfloatPack32 = Format(C.VK_FORMAT_B10G11R11_UFLOAT_PACK32)
+	FormatR32Sfloat             = Format(C.VK_FORMAT_R32_SFLOAT)
+	FormatR32Uint               = Format(C.VK_FORMAT_R32_UINT)
+	FormatBC5UnormBlock         = Format(C.VK_FORMAT_BC5_UNORM_BLOCK)
+	FormatBC6HUfloatBlock       = Format(C.VK_FORMAT_BC6H_UFLOAT_BLOCK)
+	FormatBC7UnormBlock         = Format(C.VK_FORMAT_BC7_UNORM_BLOCK)
+	FormatBC7SrgbBlock          = Format(C.VK_FORMAT_BC7_SRGB_BLOCK)
+)
+
+// Batch 4: the view types a 3D froxel grid and a probe array need
+const (
+	ImageViewType1D        = ImageViewType(C.VK_IMAGE_VIEW_TYPE_1D)
+	ImageViewType3D        = ImageViewType(C.VK_IMAGE_VIEW_TYPE_3D)
+	ImageViewTypeCubeArray = ImageViewType(C.VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
+)
+
+// Batch 4: an image a compute shader writes is bound as a storage image, in
+// GENERAL layout, with the sampler field of its descriptor left zero
+const (
+	ImageUsageStorage          = ImageUsageFlags(C.VK_IMAGE_USAGE_STORAGE_BIT)
+	DescriptorTypeStorageImage = DescriptorType(C.VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+)
+
+// Batch 9: the usage an indirect draw or dispatch reads its arguments from
+const BufferUsageIndirectBuffer = BufferUsageFlags(C.VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT)
+
+// Batch 3: compute
+const (
+	PipelineBindPointCompute = PipelineBindPoint(C.VK_PIPELINE_BIND_POINT_COMPUTE)
+	ShaderStageCompute       = ShaderStageFlags(C.VK_SHADER_STAGE_COMPUTE_BIT)
+	ShaderStageAll           = ShaderStageFlags(C.VK_SHADER_STAGE_ALL)
+)
+
+// Batch 2/3: the stages and accesses a compute hazard is expressed in
+const (
+	PipelineStage2VertexShader  = PipelineStageFlags2(0x00000008)
+	PipelineStage2ComputeShader = PipelineStageFlags2(0x00000800)
+	PipelineStage2DrawIndirect  = PipelineStageFlags2(0x00000002)
+	PipelineStage2AllGraphics   = PipelineStageFlags2(0x00008000)
+	PipelineStage2Blit          = PipelineStageFlags2(0x400000000)
+	PipelineStage2Resolve       = PipelineStageFlags2(0x200000000)
+	PipelineStage2Clear         = PipelineStageFlags2(0x800000000)
+)
+
+const (
+	Access2IndirectCommandRead        = AccessFlags2(0x00000001)
+	Access2ShaderWrite                = AccessFlags2(0x00000040)
+	Access2ColorAttachmentRead        = AccessFlags2(0x00000080)
+	Access2DepthStencilAttachmentRead = AccessFlags2(0x00000200)
+	Access2ShaderStorageRead          = AccessFlags2(0x200000000)
+	Access2ShaderStorageWrite         = AccessFlags2(0x400000000)
+)
+
+// Batch 1: the bits a format probe tests, beside the depth one already here
+const (
+	FormatFeatureSampledImage             = FormatFeatureFlags(C.VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+	FormatFeatureStorageImage             = FormatFeatureFlags(C.VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+	FormatFeatureColorAttachment          = FormatFeatureFlags(C.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+	FormatFeatureColorAttachmentBlend     = FormatFeatureFlags(C.VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)
+	FormatFeatureSampledImageFilterLinear = FormatFeatureFlags(C.VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)
+	FormatFeatureBlitSrc                  = FormatFeatureFlags(C.VK_FORMAT_FEATURE_BLIT_SRC_BIT)
+	FormatFeatureBlitDst                  = FormatFeatureFlags(C.VK_FORMAT_FEATURE_BLIT_DST_BIT)
+)
+
+// Batch 6: the blend factors and ops glass, water and additive glow need
+const (
+	BlendFactorSrcColor         = BlendFactor(C.VK_BLEND_FACTOR_SRC_COLOR)
+	BlendFactorOneMinusSrcColor = BlendFactor(C.VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR)
+	BlendFactorDstColor         = BlendFactor(C.VK_BLEND_FACTOR_DST_COLOR)
+	BlendFactorOneMinusDstColor = BlendFactor(C.VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR)
+	BlendFactorDstAlpha         = BlendFactor(C.VK_BLEND_FACTOR_DST_ALPHA)
+	BlendFactorOneMinusDstAlpha = BlendFactor(C.VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA)
+	BlendFactorConstantColor    = BlendFactor(C.VK_BLEND_FACTOR_CONSTANT_COLOR)
+	BlendFactorConstantAlpha    = BlendFactor(C.VK_BLEND_FACTOR_CONSTANT_ALPHA)
+)
+
+const (
+	BlendOpSubtract        = BlendOp(C.VK_BLEND_OP_SUBTRACT)
+	BlendOpReverseSubtract = BlendOp(C.VK_BLEND_OP_REVERSE_SUBTRACT)
+	BlendOpMin             = BlendOp(C.VK_BLEND_OP_MIN)
+	BlendOpMax             = BlendOp(C.VK_BLEND_OP_MAX)
+)
+
+// Batch 6: reverse-Z wants Greater, a stencil-free depth equality test Never
+const (
+	CompareOpNever          = CompareOp(C.VK_COMPARE_OP_NEVER)
+	CompareOpGreater        = CompareOp(C.VK_COMPARE_OP_GREATER)
+	CompareOpNotEqual       = CompareOp(C.VK_COMPARE_OP_NOT_EQUAL)
+	CompareOpGreaterOrEqual = CompareOp(C.VK_COMPARE_OP_GREATER_OR_EQUAL)
+)
+
+// Batch 6: misc
+const (
+	SamplerAddressModeMirroredRepeat = SamplerAddressMode(C.VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT)
+	PolygonModeLine                  = PolygonMode(C.VK_POLYGON_MODE_LINE)
+)
+
+const (
+	DynamicStateDepthTestEnable  = DynamicState(C.VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE)
+	DynamicStateDepthWriteEnable = DynamicState(C.VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE)
+	DynamicStateDepthBias        = DynamicState(C.VK_DYNAMIC_STATE_DEPTH_BIAS)
+)

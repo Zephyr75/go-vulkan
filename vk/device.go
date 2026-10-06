@@ -21,7 +21,10 @@ type Features struct {
 	DescriptorBindingPartiallyBound              bool
 	DescriptorBindingVariableDescriptorCount     bool
 	ShaderSampledImageArrayNonUniformIndexing    bool
+	ShaderStorageImageArrayNonUniformIndexing    bool
 	DescriptorBindingSampledImageUpdateAfterBind bool
+	DescriptorBindingStorageImageUpdateAfterBind bool
+	HostQueryReset                               bool
 	// 1.3
 	DynamicRendering bool
 	Synchronization2 bool
@@ -61,7 +64,10 @@ func (f Features) chain(a *arena) *C.VkPhysicalDeviceFeatures2 {
 	v12.descriptorBindingPartiallyBound = vkBool(f.DescriptorBindingPartiallyBound)
 	v12.descriptorBindingVariableDescriptorCount = vkBool(f.DescriptorBindingVariableDescriptorCount)
 	v12.shaderSampledImageArrayNonUniformIndexing = vkBool(f.ShaderSampledImageArrayNonUniformIndexing)
+	v12.shaderStorageImageArrayNonUniformIndexing = vkBool(f.ShaderStorageImageArrayNonUniformIndexing)
 	v12.descriptorBindingSampledImageUpdateAfterBind = vkBool(f.DescriptorBindingSampledImageUpdateAfterBind)
+	v12.descriptorBindingStorageImageUpdateAfterBind = vkBool(f.DescriptorBindingStorageImageUpdateAfterBind)
+	v12.hostQueryReset = vkBool(f.HostQueryReset)
 	v12.scalarBlockLayout = vkBool(f.ScalarBlockLayout)
 
 	feat2 := (*C.VkPhysicalDeviceFeatures2)(a.alloc(1, unsafe.Sizeof(C.VkPhysicalDeviceFeatures2{})))

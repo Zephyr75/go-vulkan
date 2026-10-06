@@ -96,17 +96,26 @@ type SamplerCreateInfo struct {
 	AddressModeW     SamplerAddressMode
 	AnisotropyEnable bool
 	MaxAnisotropy    float32
+	MinLod           float32
 	MaxLod           float32
+	// Turns the sampler into a comparison sampler, which is what hardware PCF
+	// is: the tap returns the result of the compare, filtered, not the depth
+	CompareEnable bool
+	CompareOp     CompareOp
 	// Border color for ClampToBorder address modes. The zero value maps to
 	// opaque black (the historical fixed default), not transparent black.
 	BorderColor BorderColor
 }
 
-// Creates a sampler with zero min LOD; BorderColor defaults to opaque black
+// Creates a sampler; BorderColor defaults to opaque black
 func CreateSampler(d Device, ci SamplerCreateInfo) (Sampler, error) {
 	aniso := C.VkBool32(C.VK_FALSE)
 	if ci.AnisotropyEnable {
 		aniso = C.VK_TRUE
+	}
+	cmp := C.VkBool32(C.VK_FALSE)
+	if ci.CompareEnable {
+		cmp = C.VK_TRUE
 	}
 	border := ci.BorderColor
 	if border == 0 {
@@ -122,7 +131,9 @@ func CreateSampler(d Device, ci SamplerCreateInfo) (Sampler, error) {
 		addressModeW:     C.VkSamplerAddressMode(ci.AddressModeW),
 		anisotropyEnable: aniso,
 		maxAnisotropy:    C.float(ci.MaxAnisotropy),
-		minLod:           0,
+		compareEnable:    cmp,
+		compareOp:        C.VkCompareOp(ci.CompareOp),
+		minLod:           C.float(ci.MinLod),
 		maxLod:           C.float(ci.MaxLod),
 		borderColor:      C.VkBorderColor(border),
 	}
