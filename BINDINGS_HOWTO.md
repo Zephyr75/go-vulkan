@@ -5,15 +5,17 @@ howtovulkan.com program (`how_to_vulkan/_reference.cpp`): a single-pass forward
 renderer that draws one textured indexed mesh. It has no compute, no offscreen
 targets, no mipmaps and no second pass.
 
-Everything else in `vk` exists for Overdrive and is listed in
-`BINDINGS_OVERDRIVE.md`. Not here: why individual functions are shaped the way
+Everything else in `vk` exists for Overdrive or gutter and is listed in
+`BINDINGS_OVERDRIVE_GUTTER.md`. Not here: why individual functions are shaped the way
 they are, or what the engine does with them
 (`overdrive/notes/tmp/BACKEND_DECISION.md`).
 
 Audited 2026-10-06. Every function in `vk` is called by `main.go`, by Overdrive,
-or by `vk/vma.go`; the six no caller used (`CmdSetCullMode`, `CmdSetFrontFace`,
-`CmdSetDepthCompareOp`, `CmdBlitImage`, `GetPhysicalDeviceSurfaceFormatsKHR` /
-`GetPhysicalDeviceSurfacePresentModesKHR`) were removed that day.
+by gutter, or by `vk/vma.go`; the six no caller used (`CmdSetCullMode`,
+`CmdSetFrontFace`, `CmdSetDepthCompareOp`, `CmdBlitImage`,
+`GetPhysicalDeviceSurfaceFormatsKHR` / `GetPhysicalDeviceSurfacePresentModesKHR`)
+were removed that day. `GetPhysicalDeviceSurfaceFormatsKHR` was restored on
+2026-10-07 for gutter.
 
 ---
 
