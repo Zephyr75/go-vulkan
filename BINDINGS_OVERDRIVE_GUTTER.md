@@ -1,39 +1,43 @@
-# Bindings only Overdrive uses
+# Bindings Overdrive and gutter use
 
-The `vk` surface Overdrive needs beyond what `how_to_vulkan/main.go` calls, and
-what is still to be added. The tutorial's set, which Overdrive also uses in
-full, is in `BINDINGS_HOWTO.md`.
+The `vk` surface Overdrive and gutter's Vulkan example need beyond what
+`how_to_vulkan/main.go` calls, and what is still to be added. The tutorial's
+set, which Overdrive also uses in full, is in `BINDINGS_HOWTO.md`.
 
-Audited 2026-10-06 against `overdrive/src/vulkan/*.go`. Every function below has
-a caller there; anything that lost its caller has been removed rather than kept
-in case.
+Audited 2026-10-06 against `overdrive/src/vulkan/*.go`, and 2026-10-07 against
+`gutter/examples/vulkan/*.go`. Every function below has a caller in one of the
+two; anything that lost its caller has been removed rather than kept in case.
 
 ---
 
 ## 1. Functions
 
-15, none of them in the reference program.
+16, none of them in the reference program.
 
-| function | caller | why it exists |
-|---|---|---|
-| `EnumerateInstanceExtensionProperties` | `backend.go` | `VK_EXT_debug_utils` is optional, so it is asked for rather than assumed — enabling an extension the loader lacks fails instance creation |
-| `LoadDebugUtils` `CmdBeginDebugLabel` `CmdEndDebugLabel` | `backend.go`, `frame.go` | Groups a RenderDoc capture by pass. The label entry points come from an extension, so `LoadDebugUtils` fetches them after instance creation and leaves both calls as no-ops when the extension is absent (`vk/label.go`) |
-| `QueueWaitIdle` | `backend.go` | One-time-submit teardown without a fence |
-| `CreateComputePipeline` | `pipeline.go` | One stage plus a layout. `DestroyPipeline` covers teardown |
-| `CmdDispatch` | `frame.go` | Compute grid, in workgroups |
-| `CmdDispatchIndirect` | `frame.go` | One compute pass sizes the next — variable-length GPU work |
-| `CmdDraw` | `frame.go` | Non-indexed draw: fullscreen quads and the skybox |
-| `CmdDrawIndexedIndirect` `CmdDrawIndirect` | `frame.go` | GPU-driven draws |
-| `CmdCopyBuffer` | `buffer.go`, `frame.go` | A device-local buffer's initial contents, and readback out of one |
-| `CmdCopyImage` | `frame.go` | Shadow atlas: a depth tile is copied from the static atlas into the dynamic one, and only the movable casters are redrawn on top |
-| `CmdCopyImageToBuffer` | `frame.go` | Mirror of `CmdCopyBufferToImage`, sharing `BufferImageCopy`. Dumps the shadow atlas to a PNG — the only way to eyeball a depth target with no screenshot path |
-| `CmdClearColorImage` | `frame.go` | Zeroes a storage image before the compute pass that accumulates into it |
+| function | used by | caller | why it exists |
+|---|---|---|---|
+| `EnumerateInstanceExtensionProperties` | overdrive | `backend.go` | `VK_EXT_debug_utils` is optional, so it is asked for rather than assumed — enabling an extension the loader lacks fails instance creation |
+| `LoadDebugUtils` `CmdBeginDebugLabel` `CmdEndDebugLabel` | overdrive | `backend.go`, `frame.go` | Groups a RenderDoc capture by pass. The label entry points come from an extension, so `LoadDebugUtils` fetches them after instance creation and leaves both calls as no-ops when the extension is absent (`vk/label.go`) |
+| `QueueWaitIdle` | overdrive | `backend.go` | One-time-submit teardown without a fence |
+| `CreateComputePipeline` | overdrive | `pipeline.go` | One stage plus a layout. `DestroyPipeline` covers teardown |
+| `CmdDispatch` | overdrive | `frame.go` | Compute grid, in workgroups |
+| `CmdDispatchIndirect` | overdrive | `frame.go` | One compute pass sizes the next — variable-length GPU work |
+| `CmdDraw` | both | `frame.go` (overdrive), `host.go` (gutter) | Non-indexed draw: fullscreen quads and the skybox in overdrive, one six-vertex quad per draw-list command in gutter |
+| `CmdDrawIndexedIndirect` `CmdDrawIndirect` | overdrive | `frame.go` | GPU-driven draws |
+| `CmdCopyBuffer` | overdrive | `buffer.go`, `frame.go` | A device-local buffer's initial contents, and readback out of one |
+| `CmdCopyImage` | overdrive | `frame.go` | Shadow atlas: a depth tile is copied from the static atlas into the dynamic one, and only the movable casters are redrawn on top |
+| `CmdCopyImageToBuffer` | overdrive | `frame.go` | Mirror of `CmdCopyBufferToImage`, sharing `BufferImageCopy`. Dumps the shadow atlas to a PNG — the only way to eyeball a depth target with no screenshot path |
+| `CmdClearColorImage` | overdrive | `frame.go` | Zeroes a storage image before the compute pass that accumulates into it |
+| `GetPhysicalDeviceSurfaceFormatsKHR` | gutter | `host.go` | Picks a UNORM swapchain format. gutter's colours are already sRGB-encoded bytes, so an `_SRGB` swapchain would encode them twice. `SurfaceFormat` came back with it |
 
 ## 2. Types, enums and fields
 
 Beyond the tutorial's needs, all added for the `Backend`/`Frame`/`Pass`/`Compute`
 rewrite (`overdrive/notes/tmp/INTERFACE_PLAN.md`). `vk/types.go` groups the
-constants by the batch that added them.
+constants by the batch that added them. gutter uses none of them: beyond the
+tutorial it needs only constants from the base sections of `vk/types.go`
+(alpha blending, `CullModeNone`, `DescriptorBindingPartiallyBound`, clamped
+sampling, UNORM formats), and its barriers fill only `DependencyInfo.Image`.
 
 | addition | for |
 |---|---|
@@ -54,7 +58,7 @@ address the same way the uniform buffer is.
 
 ## 3. Removed
 
-Bound for Overdrive, then dropped once nothing called them:
+Bound for Overdrive, then dropped once neither Overdrive nor gutter called them:
 
 | function | removed | why |
 |---|---|---|
@@ -63,7 +67,7 @@ Bound for Overdrive, then dropped once nothing called them:
 | `CmdSetFrontFace` | 2026-08-05 | Front face is a pass's winding convention, so it belongs in the pipeline |
 | `CmdSetCullMode` `CmdSetDepthCompareOp` | 2026-10-06 | Cull mode and depth compare are baked into pipeline objects. `DynamicStateCullMode` / `FrontFace` / `DepthCompareOp` went with them |
 | `CmdBlitImage` | 2026-10-06 | Mip generation never landed. `ImageBlit` and `Offset3D` went with it |
-| `GetPhysicalDeviceSurfaceFormatsKHR` `GetPhysicalDeviceSurfacePresentModesKHR` | 2026-10-06 | The swapchain hardcodes an sRGB BGRA format and FIFO. `SurfaceFormat` went with them |
+| `GetPhysicalDeviceSurfacePresentModesKHR` | 2026-10-06 | Overdrive's swapchain hardcodes FIFO. `GetPhysicalDeviceSurfaceFormatsKHR` went with it and was restored on 2026-10-07 because gutter calls it (§1) |
 
 ## 4. Still to add
 
