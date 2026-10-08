@@ -65,6 +65,23 @@ func GetPhysicalDeviceSurfaceFormatsKHR(pd PhysicalDevice, s SurfaceKHR) ([]Surf
 	return res, nil
 }
 
+// Lists the present modes supported by a physical device for a surface
+func GetPhysicalDeviceSurfacePresentModesKHR(pd PhysicalDevice, s SurfaceKHR) ([]PresentMode, error) {
+	vkDevice := C.VkPhysicalDevice(unsafe.Pointer(pd))
+	vkSurface := C.VkSurfaceKHR(unsafe.Pointer(s))
+	vkPresentModes, err := enumerate(func(count *C.uint32_t, out *C.VkPresentModeKHR) C.VkResult {
+		return C.vkGetPhysicalDeviceSurfacePresentModesKHR(vkDevice, vkSurface, count, out)
+	})
+	if err != nil {
+		return nil, err
+	}
+	presentModes := make([]PresentMode, len(vkPresentModes))
+	for i := range vkPresentModes {
+		presentModes[i] = PresentMode(vkPresentModes[i])
+	}
+	return presentModes, nil
+}
+
 // Checks if a physical device's queue family supports presentation to a surface
 func GetPhysicalDeviceSurfaceSupportKHR(pd PhysicalDevice, family uint32, s SurfaceKHR) (bool, error) {
 	var sup C.VkBool32

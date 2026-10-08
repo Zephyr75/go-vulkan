@@ -12,7 +12,7 @@ two; anything that lost its caller has been removed rather than kept in case.
 
 ## 1. Functions
 
-16, none of them in the reference program.
+17, none of them in the reference program.
 
 | function | used by | caller | why it exists |
 |---|---|---|---|
@@ -29,6 +29,7 @@ two; anything that lost its caller has been removed rather than kept in case.
 | `CmdCopyImageToBuffer` | overdrive | `frame.go` | Mirror of `CmdCopyBufferToImage`, sharing `BufferImageCopy`. Dumps the shadow atlas to a PNG — the only way to eyeball a depth target with no screenshot path |
 | `CmdClearColorImage` | overdrive | `frame.go` | Zeroes a storage image before the compute pass that accumulates into it |
 | `GetPhysicalDeviceSurfaceFormatsKHR` | gutter | `host.go` | Picks a UNORM swapchain format. gutter's colours are already sRGB-encoded bytes, so an `_SRGB` swapchain would encode them twice. `SurfaceFormat` came back with it |
+| `GetPhysicalDeviceSurfacePresentModesKHR` | Overdrive | `swapchain.go` | With `[window] vsync = false`, picks mailbox or immediate when the surface lists them; FIFO, the only mode every driver has, otherwise. Removed 2026-10-06, restored 2026-10-08 |
 
 ## 2. Types, enums and fields
 
@@ -67,7 +68,6 @@ Bound for Overdrive, then dropped once neither Overdrive nor gutter called them:
 | `CmdSetFrontFace` | 2026-08-05 | Front face is a pass's winding convention, so it belongs in the pipeline |
 | `CmdSetCullMode` `CmdSetDepthCompareOp` | 2026-10-06 | Cull mode and depth compare are baked into pipeline objects. `DynamicStateCullMode` / `FrontFace` / `DepthCompareOp` went with them |
 | `CmdBlitImage` | 2026-10-06 | Mip generation never landed. `ImageBlit` and `Offset3D` went with it |
-| `GetPhysicalDeviceSurfacePresentModesKHR` | 2026-10-06 | Overdrive's swapchain hardcodes FIFO. `GetPhysicalDeviceSurfaceFormatsKHR` went with it and was restored on 2026-10-07 because gutter calls it (§1) |
 
 ## 4. Still to add
 

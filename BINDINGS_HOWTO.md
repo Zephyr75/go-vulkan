@@ -15,7 +15,8 @@ by gutter, or by `vk/vma.go`; the six no caller used (`CmdSetCullMode`,
 `CmdSetFrontFace`, `CmdSetDepthCompareOp`, `CmdBlitImage`,
 `GetPhysicalDeviceSurfaceFormatsKHR` / `GetPhysicalDeviceSurfacePresentModesKHR`)
 were removed that day. `GetPhysicalDeviceSurfaceFormatsKHR` was restored on
-2026-10-07 for gutter.
+2026-10-07 for gutter, and `GetPhysicalDeviceSurfacePresentModesKHR` on
+2026-10-08 for Overdrive's vsync setting.
 
 ---
 
