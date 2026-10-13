@@ -407,9 +407,9 @@ const QueueFamilyIgnored = uint32(C.VK_QUEUE_FAMILY_IGNORED)
 
 // ---- additions for compute, storage images, HDR, timing and labels -------
 //
-// Every constant below was added for Overdrive (BINDINGS_OVERDRIVE_GUTTER.md §2). They
-// are grouped by the batch that added them rather than merged into the sections
-// above, so what a batch added stays readable.
+// Every constant below was added for Overdrive. They are grouped by the batch
+// that added them rather than merged into the sections above, so what a batch
+// added stays readable.
 
 // Batch 1: formats. HDR colour, single- and two-channel float targets, and the
 // block-compressed families a loader hands over already compressed
